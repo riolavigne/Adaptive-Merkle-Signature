@@ -3,6 +3,10 @@
 #include <stdlib.h>
 using namespace std;
 
+#include "winternitz.h"
+
 int main(int, char**) {
- cout << "Hello, world!" << endl;
+  string secret = "This is my secret key message thingy";
+  Data sk = Winternitz::hashMessage(secret, secret.size());
+  cout << "sk = " << sk.toString() << endl;
 }
