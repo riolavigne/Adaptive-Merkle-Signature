@@ -24,11 +24,11 @@ int main(int, char**) {
   cout << sig.toString() << endl;
   vector<Data> signature = sig.getSignature(digest, sk);
   cout << "PUBLIC KEY: ";
-  vector<Data> publicKey = sig.getPublicKey(sk);
-  //cout << publicKey[0].toString() << endl;
-  printVec(publicKey);
+  Data publicKey = sig.getPublicKey(sk);
+  cout << publicKey.toString() << endl;
+  //printVec(publicKey);
+  bool verified = sig.verifySignature(digest, signature, publicKey);
   cout << "VERIFIED: ";
-  vector<Data> verifiedKey = sig.verifySignature(digest, signature);
-  printVec(verifiedKey);
+  cout << verified;
   cout << endl;
 }
