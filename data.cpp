@@ -10,13 +10,13 @@ Data::Data() {
 }
 
 Data::Data(byte* inData) {
-  memcpy(data, inData, DIGESTSIZE);
+  memcpy(bytes, inData, DIGESTSIZE);
 }
 
 // constructor for base64 encoded string to data
 Data::Data(string encoded) {
   Base64Decoder decoder;
-  decoder.Attach(new ArraySink(data, DIGESTSIZE));
+  decoder.Attach(new ArraySink(bytes, DIGESTSIZE));
   decoder.Put((byte *)encoded.data(), encoded.size());
   decoder.MessageEnd();
 }
@@ -30,7 +30,7 @@ string Data::toString() {
   CryptoPP::Base64Encoder encoder;
   string output;
   encoder.Attach( new CryptoPP::StringSink( output ) );
-  encoder.Put(data, DIGESTSIZE);
+  encoder.Put(bytes, DIGESTSIZE);
   encoder.MessageEnd();
   return output;
 }

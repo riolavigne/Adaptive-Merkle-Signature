@@ -16,7 +16,7 @@ class Data {
     ~Data();
     string toString();
     size_t size();
-    byte data[DIGESTSIZE];
+    byte bytes[DIGESTSIZE];
   private:
     // nada
 };

@@ -4,7 +4,7 @@
 using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
-#include <vector>
+//#include <vector>
 
 #include "cryptopp/sha.h"
 #include "cryptopp/base64.h"
@@ -21,71 +21,23 @@ using namespace CryptoPP;
 #define T 128
 #define TP 5
 
-void Winternitz::printVector(vector<unsigned int> in) {
-  cout << "[";
-  for (size_t i = 0; i < in.size(); i++) {
-    cout << in[i] << ", ";
-  }
-  cout << "]";
-  cout << "  " << in.size() << endl;
+#include <sstream>
+
+// initialize for creating a winternitz signature...
+// Maybe everything should be static -- to decide later :)
+Winternitz::Winternitz(unsigned int securityParameter, unsigned int log, unsigned int log2) {
+  l = securityParameter;
+  t = log;
+  t_p = log2;
 }
 
-//string convertToBase64(byte* digest, int digest_size) {
-//    CryptoPP::Base64Encoder encoder;
-//    std::string output;
-//    encoder.Attach( new CryptoPP::StringSink( output ) );
-//    encoder.Put(digest, digest_size);
-//    encoder.MessageEnd();
-//    return output;
-//}
-//
-//void convertFromBase64(string encoded, byte* decoded, int input_len) {
-//  CryptoPP::Base64Decoder decoder;
-//  decoder.Attach(new CryptoPP::ArraySink(decoded, HASH::DIGESTSIZE));
-//  decoder.Put((byte *)encoded.data(), encoded.size());
-//  decoder.MessageEnd();
-//}
-//
-//vector<unsigned int> convertToVector(byte* data, int len) {
-//  vector<unsigned int> result;
-//  for (int i = 0; i < len/4; i+=1) {
-//    unsigned int f = ((unsigned int*) data)[i];
-//    result.push_back(f);
-//  }
-//  return result;
-//}
-//
-//vector<unsigned int> convertToVector(string input, int digestSize) {
-//  byte data[digestSize];
-//  convertFromBase64(input, data, digestSize);
-//  return convertToVector(data, digestSize);
-//}
-//
-//vector<unsigned int> convertStringToVector(string in, int len) {
-//  byte decode[len];
-//  convertFromBase64(in, decode, len);
-//  return convertToVector(decode, len);
-//}
-//
-//
-//void convertToBytes(vector<unsigned int> vec, byte* out, int len) {
-//  for (int i = 0; i < len; i++) {
-//    out[i] = ((byte*) &vec[i/4])[i % 4];
-//  }
-//}
-//
-//string convertToString(vector<unsigned int> vec){
-//  byte bytes[HASH::DIGESTSIZE];
-//  convertToBytes(vec, bytes, HASH::DIGESTSIZE);
-//  return convertToBase64(bytes, HASH::DIGESTSIZE);
-//}
-//
-//void convertToVectorSig(string* signatures, vector<unsigned int> *vecSig, int numKeys) {
-//  for (int i = 0; i < numKeys; i++) {
-//    vecSig[i] = convertToVector(signatures[i], HASH::DIGESTSIZE);
-//  }
-//}
-//
+string Winternitz::toString() {
+  unsigned int n = t + t_p;
+  stringstream ss;
+  ss <<"Winternitz Signature { l = "<< l << ", t = "<<t<<", t' = "<<t_p<<", n = "<<n<<" }";
+  return ss.str();
+}
+
 Data Winternitz::hashMessage(string input, int input_len) {
   HASH hash;
   (byte*) input.c_str();
@@ -94,21 +46,132 @@ Data Winternitz::hashMessage(string input, int input_len) {
       (byte *) input.c_str(), input_len);
   return Data(abDigest);
 }
-//
-//// Hashes an input string to a vector of unsigned ints
-//vector<unsigned int> hashMany(vector<unsigned int> input, int l) {
-//    HASH hash;
-//    byte data[HASH::DIGESTSIZE];
-//    convertToBytes(input, data, HASH::DIGESTSIZE);
-//    byte abDigest[HASH::DIGESTSIZE];
-//    HASH().CalculateDigest(abDigest,
-//            data, input.size());
-//    for (int i = 0; i < l-1; i++) {
-//        HASH().CalculateDigest(abDigest, abDigest, HASH::DIGESTSIZE);
-//    }
-//    return convertToVector(abDigest, HASH::DIGESTSIZE);
-//}
-//
+
+// TODO: return a RANDOM key for use or something...
+Data Winternitz::generateSecretKey(Data seed) {
+  return seed;
+}
+
+
+// Hashes an input string to a vector of unsigned ints
+Data Winternitz::hashMany(Data data, int lmt) {
+    HASH hash;
+    byte abDigest[DIGESTSIZE];
+    memcpy(abDigest, data.bytes, DIGESTSIZE);
+    for (int i = 0; i < lmt; i++) {
+        HASH().CalculateDigest(abDigest, abDigest, DIGESTSIZE);
+    }
+    return Data(abDigest);
+}
+
+vector<Data> Winternitz::getSignature(Data digest, Data sk) {
+  vector<unsigned int> b = generateB(digest);
+  //cout << "b : " << b[2] << endl;
+  vector<Data> secretKey = generateSecretKeys(sk);
+  //cout << "sk[0]: " << secretKey[2].toString() << endl;
+  // then generate signature based on that in a vector<Data>
+  vector<Data> sig = calculateSig(secretKey, b);
+  //cout << "sig[0]: " << sig[2].toString() << endl;
+  return sig;
+}
+
+vector<unsigned int> Winternitz::generateB(Data digest) {
+  vector<unsigned int> b = convertToBase(digest);
+  calculateChecksum(b);
+  return b;
+}
+
+vector<unsigned int> Winternitz::convertToBase(Data data) {
+  CryptoPP::Integer dec(data.bytes, DIGESTSIZE);
+  return convertIntegerToBase(dec);
+}
+
+vector<unsigned int> Winternitz::convertIntegerToBase(CryptoPP::Integer dec) {
+  vector<unsigned int> result;
+  for (int i = 0; i < t; i++) { // want exactly log, even if it fits in less...
+    result.push_back(dec % l);
+    dec /= l;
+  }
+  return result;
+}
+
+void Winternitz::calculateChecksum(vector<unsigned int> &b) {
+  CryptoPP::Integer total = 0;
+  for (unsigned int i = 0; i < b.size(); i++) {
+    total += l - b[i];
+  }
+  CryptoPP::Integer temp = total;
+  for (int i = 0; i < t_p; i++) {
+    b.push_back(total % l);
+    total /= l;
+  }
+}
+
+vector<Data> Winternitz::calculateSig(vector<Data> &sk, vector<unsigned int> &b) {
+  vector<Data> sig;
+  for (int i = 0; i < sk.size(); i++) {
+    sig.push_back(hashMany(sk[i],b[i]));
+  }
+  return sig;
+}
+
+// TODO: Make this actually a secure sk generator >__>;;
+vector<Data> Winternitz::generateSecretKeys(Data sk) {
+  int blockSize = DIGESTSIZE;
+  CryptoPP::LC_RNG rng(blockSize); // TODO: Fix the block size
+  vector<Data> out;
+  unsigned int n = t + t_p;
+  for (int i = 0; i < n; i++) {
+    // make block of randomness
+    byte scratch[blockSize];
+    rng.GenerateBlock(scratch, blockSize);
+    Data data(scratch);
+    out.push_back(data);
+  }
+  return out;
+}
+
+vector<Data> Winternitz::getPublicKey(Data sk) {
+  vector<Data> secretKey = generateSecretKeys(sk);
+  return generatePublicKey(secretKey);
+}
+
+vector<Data> Winternitz::generatePublicKey(vector<Data> &sk) {
+  vector<Data> pk;
+  for (int i = 0; i < sk.size(); i++) {
+    pk.push_back(hashMany(sk[i],4));
+  }
+  return pk;
+}
+
+vector<Data> Winternitz::verifySignature(Data digest, vector<Data> sig) {
+  vector<unsigned int> b = generateB(digest);
+  vector<Data> verified;
+  for (int i = 0; i < sig.size(); i++) {
+    verified.push_back(hashMany(sig[i], l - b[i]));
+  }
+  return verified;
+}
+
+// Not needed (hopefully!)
+
+void Winternitz::printVector(vector<unsigned int> in) {
+  cout << "[ ";
+  for (int i = 0; i < in.size(); i++) {
+    cout << in[i] << ", ";
+  }
+  cout << " ] " << in.size() << endl;
+}
+
+void Winternitz::printVector(vector<Data> in) {
+  cout << "[ ";
+  for (int i = 0; i < in.size(); i++) {
+    cout << in[i].toString() << ", ";
+  }
+  cout << " ] " << in.size() << endl;
+}
+
+
 //// secretKey is actually HASH::DIGESTSIZE.. I make it out of a hash :)
 //void generateSecretKeys(vector<unsigned int> secretKey, int numKeys, vector<unsigned int>* out) {
 //  byte sk[HASH::DIGESTSIZE];
@@ -159,15 +222,6 @@ Data Winternitz::hashMessage(string input, int input_len) {
 //    publicKeys[i] = hashMany(secretKeys[i], SECURITYPARAMETER);
 //  }
 //  return hashPublicKeys(publicKeys, numKeys);
-//}
-//
-//vector<unsigned int> convertIntegerToBase(CryptoPP::Integer dec, int base, int log) {
-//  vector<unsigned int> result;
-//  for (int i = 0; i < log; i++) { // want exactly log, even if it fits in less...
-//    result.push_back(dec % base);
-//    dec /= base;
-//  }
-//  return result;
 //}
 //
 //vector<unsigned int> convertToBase(vector<unsigned int> input, int base, int log) {
