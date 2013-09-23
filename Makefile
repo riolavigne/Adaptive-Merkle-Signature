@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-g3 -ggdb -O0 -Wall -Wextra -Wno-unused
 LDFLAGS=-L/cryptopp/ -lcryptopp
-SOURCES=data.cpp winternitz.cpp main.cpp
+SOURCES=data.cpp winternitz.cpp merkle.cpp main.cpp
 OBJECTS=$(SOURCES:.cpp=.cpp)
 EXECUTABLE=main
 
