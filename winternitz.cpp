@@ -174,7 +174,8 @@ Data Winternitz::generatePublicKey(vector<Data> &sk) {
   vector<Data> pk;
   for (int i = 0; i < sk.size(); i++) {
     pk.push_back(hashMany(sk[i],l));
-  }Data calculateVerifiedSig(Data digest, vector<Data> &sig);
+  }
+  Data calculateVerifiedSig(Data digest, vector<Data> &sig);
   // combine pk into one
   return combineHashes(pk);
 }

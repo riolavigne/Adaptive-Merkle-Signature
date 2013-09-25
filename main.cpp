@@ -5,6 +5,7 @@ using namespace std;
 
 //#include "winternitz.h"
 #include "merkle.h"
+//#include "adaptiveMerkle.h"
 
 void testWinternitz() {
   string message = "This is my message that really needs to get signed";
@@ -27,7 +28,7 @@ void testWinternitz() {
 void testMerkle() {
   string secret = "woo woo this is mah secret";
   Data sk = Winternitz::hashMessage(secret, secret.size());
-  unsigned int height = 1;
+  unsigned int height = 20;
   Merkle tree(sk, height);
   Data pk = tree.getPublicKey();
   cout << tree.toString() << endl;
@@ -35,7 +36,12 @@ void testMerkle() {
 
   string message = "This is a message I really need to sign... MULTIPLE TIMES!";
   Data digest = Winternitz::hashMessage(message, message.size());
-  tree.getSignature(digest);
+  for (int i = 0; i < CryptoPP::Integer::Power2(height); i++) {
+    Merkle::Signature merk = tree.getSignature(digest);
+    bool veri = Merkle::verifySignature(digest, merk, pk);
+    if (veri != 1) cout << "FAILURE" << endl;
+   }
+  cout << "DONE." << endl;
 
 }
 
