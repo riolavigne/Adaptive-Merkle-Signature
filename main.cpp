@@ -4,8 +4,8 @@
 using namespace std;
 
 //#include "winternitz.h"
-#include "merkle.h"
-//#include "adaptiveMerkle.h"
+//#include "merkle.h"
+#include "adaptiveMerkle.h"
 
 void testWinternitz() {
   string message = "This is my message that really needs to get signed";
@@ -45,8 +45,28 @@ void testMerkle() {
 
 }
 
+void testAdaptive() {
+  string secret = "woo woo this is mah secret";
+  Data sk = Winternitz::hashMessage(secret, secret.size());
+  unsigned int numTrees = 2;
+  vector<unsigned int> depths(2);
+  depths[0] = 2;
+  depths[1] = 2;
+  AdaptiveMerkle am(depths, sk);
+  Data publicKey = am.getPublicKey();
+  cout << am.toString() << endl;
+  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
+  Data digest = Winternitz::hashMessage(message, message.size());
+  for (int i =0; i < 5; i++) {
+    AdaptiveMerkle::Signature sig = am.sign(digest);
+    bool veri = AdaptiveMerkle::verify(digest, sig, publicKey);
+    cout << "Verified? " << veri << endl;
+  }
+}
+
 int main(int, char**) {
   //testWinternitz();
-  testMerkle();
+  //testMerkle();
+  testAdaptive();
   return 0;
 }

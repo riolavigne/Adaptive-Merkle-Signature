@@ -4,9 +4,7 @@
 
 #include "cryptopp/sha.h"
 #include "cryptopp/Integer.h"
-//using namespace std;
 
-//#define DIGESTSIZE CryptoPP::SHA256::DIGESTSIZE
 #define BLOCKSIZE 16
 
 class Data {
