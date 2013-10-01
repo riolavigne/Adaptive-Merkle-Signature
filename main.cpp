@@ -49,15 +49,16 @@ void testAdaptive() {
   string secret = "woo woo this is mah secret";
   Data sk = Winternitz::hashMessage(secret, secret.size());
   unsigned int numTrees = 2;
-  vector<unsigned int> depths(2);
+  vector<unsigned int> depths(3);
   depths[0] = 2;
   depths[1] = 2;
+  depths[2] = 2;
   AdaptiveMerkle am(depths, sk);
   Data publicKey = am.getPublicKey();
   cout << am.toString() << endl;
   string message = "This is a message I really need to sign... MULTIPLE TIMES!";
   Data digest = Winternitz::hashMessage(message, message.size());
-  for (int i =0; i < 5; i++) {
+  for (int i =0; i < 16; i++) {
     AdaptiveMerkle::Signature sig = am.sign(digest);
     bool veri = AdaptiveMerkle::verify(digest, sig, publicKey);
     cout << "Verified? " << veri << endl;
