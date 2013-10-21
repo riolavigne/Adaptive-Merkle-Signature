@@ -16,6 +16,7 @@ using namespace CryptoPP;
 
 #include "winternitz.h"
 
+#define MSGSIZE 32
 #define HASH SHA256
 
 void printVec(vector<Data> in) {
@@ -39,7 +40,7 @@ void printBinary(Data in) {
 // Maybe everything should be static -- to decide later :)
 Winternitz::Winternitz(unsigned int securityParameter) {
   l = securityParameter;
-  t = calculateT(DATASIZE*8, l);
+  t = calculateT(MSGSIZE*8, l);
   t_p = calculateTPrime(t, l);
 }
 
@@ -70,32 +71,33 @@ string Winternitz::toString() {
 
 Data Winternitz::hashMessage(string input, int input_len) {
   HASH hash;
-  byte abDigest[DIGESTSIZE];
+  byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
   HASH().CalculateDigest(abDigest,
       (byte *) input.c_str(), input_len);
-  return Data(abDigest);
+  return Data(abDigest, DIGESTSIZE);
 }
 
 // TODO: check that state < 2^128
-Data Winternitz::generateSecretKey(Data seed, Integer state) {
+// TODO: Start state somewhere random
+Data Winternitz::generateSecretKey(Data seed, Integer state, unsigned int keySize) {
   ECB_Mode< AES >::Encryption e;
-  e.SetKey(seed.bytes, BLOCKSIZE);
+  e.SetKey(seed.bytes, keySize);
   Data count(state);
-  byte data[BLOCKSIZE];
-  string plain(reinterpret_cast<char const* >(count.bytes), BLOCKSIZE);
+  byte data[keySize];
+  string plain(reinterpret_cast<char const* >(count.bytes), keySize);
     StringSource(plain, true,
       new StreamTransformationFilter( e,
-        new ArraySink(data, BLOCKSIZE),
+        new ArraySink(data, keySize),
         StreamTransformationFilter::NO_PADDING
     )
   );
 
-  Data cipher(data);
+  Data cipher(data, keySize);
   return cipher;
 }
 
 // Hashes an input string to a vector of unsigned ints
-Data Winternitz::hashMany(Data data, int lmt) {
+Data Winternitz::hashMany(Data data, int lmt, unsigned int datasize) {
     HASH hash;
     byte abDigest[DIGESTSIZE];
     memcpy(abDigest, data.bytes, DATASIZE);
@@ -106,12 +108,12 @@ Data Winternitz::hashMany(Data data, int lmt) {
     for (int i = 0; i < lmt; i++) {
       HASH().CalculateDigest(abDigest, abDigest, DATASIZE); // DATASIZE = how big the data is -- automatically clip
     }
-    return Data(abDigest); // Data automatically clips it to DATASIZE
+    return Data(abDigest, datasize); // Data automatically clips it to DATASIZE
 }
 
-vector<Data> Winternitz::getSignature(Data digest, Data sk) {
+vector<Data> Winternitz::sign(Data digest, Data sk) {
   vector<unsigned int> b = generateB(digest);
-  vector<Data> secretKey = generateSecretKeys(sk);
+  vector<Data> secretKey = generateSecretKeys(sk, DIGESTSIZE);
   vector<Data> sig = calculateSig(secretKey, b);
   return sig;
 }
@@ -151,22 +153,22 @@ void Winternitz::calculateChecksum(vector<unsigned int> &b) {
 vector<Data> Winternitz::calculateSig(vector<Data> &sk, vector<unsigned int> &b) {
   vector<Data> sig;
   for (int i = 0; i < sk.size(); i++) {
-    sig.push_back(hashMany(sk[i],b[i]));
+    sig.push_back(hashMany(sk[i],b[i], DIGESTSIZE));
   }
   return sig;
 }
 
-vector<Data> Winternitz::generateSecretKeys(Data sk) {
+vector<Data> Winternitz::generateSecretKeys(Data sk, unsigned int keysize) {
   vector<Data> out;
   unsigned int n = t = t_p;
   for (unsigned int i = 0; i < n; i++) {
-    out.push_back(generateSecretKey(sk, i));
+    out.push_back(generateSecretKey(sk, i, keysize));
   }
   return out;
 }
 
 Data Winternitz::getPublicKey(Data sk) {
-  vector<Data> secretKey = generateSecretKeys(sk);
+  vector<Data> secretKey = generateSecretKeys(sk, DIGESTSIZE);
   return generatePublicKey(secretKey);
 }
 
@@ -175,19 +177,18 @@ Data Winternitz::generatePublicKey(vector<Data> &sk) {
   for (int i = 0; i < sk.size(); i++) {
     pk.push_back(hashMany(sk[i],l));
   }
-  Data calculateVerifiedSig(Data digest, vector<Data> &sig);
   // combine pk into one
-  return combineHashes(pk);
+  return combineHashes(pk, DIGESTSIZE);
 }
 
-Data Winternitz::combineHashes(vector<Data> in) {
+Data Winternitz::combineHashes(vector<Data> in, unsigned int datasize) {
   HASH hash;
   for (int i = 0; i < in.size(); i++) {
     hash.Update(in[i].bytes, DATASIZE);
   }
   byte bytes[DIGESTSIZE];
   hash.Final(bytes);
-  Data digest(bytes);
+  Data digest(bytes, datasize);
   return digest;
 }
 
@@ -224,8 +225,8 @@ Data Winternitz::calculateVerifiedSig(Data digest, vector<Data> &sig) {
   vector<unsigned int> b = generateB(digest);
   vector<Data> verified;
   for (int i = 0; i < sig.size(); i++) {
-    verified.push_back(hashMany(sig[i], l - b[i]));
+    verified.push_back(hashMany(sig[i], l - b[i], DIGESTSIZE));
   }
-  return combineHashes(verified);
+  return combineHashes(verified, DIGESTSIZE);
 }
 

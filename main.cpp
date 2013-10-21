@@ -8,66 +8,69 @@ using namespace std;
 #include "adaptiveMerkle.h"
 
 void testWinternitz() {
+  Winternitz sig(16);
+  cout << sig.toString() << endl;
   string message = "This is my message that really needs to get signed";
   string secret = "This is my secret key message thingy";
   Data sk = Winternitz::hashMessage(secret, secret.size());
-  cout << "sk = " << sk.toString() << endl;
+  cout << "sk\t" << sk.toString() << endl;
   Data digest = Winternitz::hashMessage(message, message.size());
-  cout << "digest = " << digest.toString() << endl;
-  Winternitz sig(16);
-  Data f = sig.generateSecretKey(sk, 1);
-  cout << sig.toString() << endl;
-  vector<Data> signature = sig.getSignature(digest, sk);
-  cout << "PUBLIC KEY: ";
-  Data publicKey = sig.getPublicKey(sk);
-  cout << publicKey.toString() << endl;
-  bool verified = sig.verifySignature(digest, signature, publicKey);
+  cout << "digest\t" << digest.toString() << endl;
+
+  Data pk = sig.getPublicKey(sk);
+  cout << "pk\t" << pk.toString() << endl;
+  vector<Data> signature = sig.sign(digest, sk);
+  bool verified = sig.verifySignature(digest, signature, pk);
   cout << "VERIFIED: " << verified << endl;
 }
 
-void testMerkle() {
-  string secret = "woo woo this is mah secret";
-  Data sk = Winternitz::hashMessage(secret, secret.size());
-  unsigned int height = 20;
-  Merkle tree(sk, height);
-  Data pk = tree.getPublicKey();
-  cout << tree.toString() << endl;
-  cout << "Public key = " << pk.toString() << endl;
+//void testMerkle() {
+//  string secret = "woo woo this is mah secret";
+//  Data sk = Winternitz::hashMessage(secret, secret.size());
+//  unsigned int sp = 16;
+//  unsigned int height = 10;
+//  Merkle tree(sk, height, sp);
+//  Data pk = tree.getPublicKey();
+//  cout << tree.toString() << endl;
+//  cout << "Public key = " << pk.toString() << endl;
+//
+//  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
+//  Data digest = Winternitz::hashMessage(message, message.size());
+//  for (int i = 0; i < CryptoPP::Integer::Power2(height); i++) {
+//    Merkle::Signature merk = tree.getSignature(digest);
+//    bool veri = Merkle::verifySignature(digest, merk, pk);
+//    if (veri != 1) cout << "FAILURE" << endl;
+//   }
+//  cout << "DONE." << endl;
+//
+//}
 
-  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
-  Data digest = Winternitz::hashMessage(message, message.size());
-  for (int i = 0; i < CryptoPP::Integer::Power2(height); i++) {
-    Merkle::Signature merk = tree.getSignature(digest);
-    bool veri = Merkle::verifySignature(digest, merk, pk);
-    if (veri != 1) cout << "FAILURE" << endl;
-   }
-  cout << "DONE." << endl;
-
-}
-
-void testAdaptive() {
-  string secret = "woo woo this is mah secret";
-  Data sk = Winternitz::hashMessage(secret, secret.size());
-  unsigned int numTrees = 2;
-  vector<unsigned int> depths(3);
-  depths[0] = 2;
-  depths[1] = 2;
-  depths[2] = 2;
-  AdaptiveMerkle am(depths, sk);
-  Data publicKey = am.getPublicKey();
-  cout << am.toString() << endl;
-  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
-  Data digest = Winternitz::hashMessage(message, message.size());
-  for (int i =0; i < 16; i++) {
-    AdaptiveMerkle::Signature sig = am.sign(digest);
-    bool veri = AdaptiveMerkle::verify(digest, sig, publicKey);
-    cout << "Verified? " << veri << endl;
-  }
-}
+//void testAdaptive() {
+//  string secret = "woo woo this is mah secret";
+//  Data sk = Winternitz::hashMessage(secret, secret.size());
+//  unsigned int numTrees = 2;
+//  vector<unsigned int> depths(3);
+//  depths[0] = 2;
+//  depths[1] = 2;
+//  depths[2] = 2;
+//  //depths[3] = 4;
+//  AdaptiveMerkle am(depths, sk);
+//  Data publicKey = am.getPublicKey();
+//  cout << am.toString() << endl;
+//  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
+//  Data digest = Winternitz::hashMessage(message, message.size());
+//  for (int i =0; i < 17; i++) {
+//    AdaptiveMerkle::Signature sig = am.sign(digest);
+//    bool veri = AdaptiveMerkle::verify(digest, sig, publicKey);
+//    cout << "\t" << i << endl;
+//    if (!veri)
+//      cout << "Not verified! " << i << endl;
+//  }
+//}
 
 int main(int, char**) {
-  //testWinternitz();
+  testWinternitz();
   //testMerkle();
-  testAdaptive();
+  //testAdaptive();
   return 0;
 }

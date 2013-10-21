@@ -10,8 +10,9 @@ Data::Data() {
   // nuffin
 }
 
-Data::Data(byte* inData) {
-  memcpy(bytes, inData, BLOCKSIZE);
+Data::Data(byte* inData, size_t sizeIn /*=BLOCKSIZE*/) {
+  size = sizeIn;
+  memcpy(bytes, inData, sizeIn);
 }
 
 // constructor for base64 encoded string to data
@@ -36,12 +37,12 @@ string Data::toString() {
   CryptoPP::Base64Encoder encoder;
   string output;
   encoder.Attach( new CryptoPP::StringSink( output ) );
-  encoder.Put(bytes, BLOCKSIZE);
+  encoder.Put(bytes, size);
   encoder.MessageEnd();
   return output.substr(0,output.size() - 1);
 }
 
 // size
-size_t size() {
-  return BLOCKSIZE;
+size_t Data::getSize() {
+  return size;
 }

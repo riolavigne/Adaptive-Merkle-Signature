@@ -11,7 +11,7 @@ class Winternitz {
     ~Winternitz(){}
     std::string toString(); // returns sec params of the scheme
     // calculates and returns signature given a message digest
-    std::vector<Data> getSignature(Data digest, Data sk);
+    std::vector<Data> sign(Data digest, Data sk);
     // calculates and returns public key given sk
     Data getPublicKey(Data sk);
     // calculates the verifiable signature
@@ -20,9 +20,10 @@ class Winternitz {
 
     // Static functions
     static Data hashMessage(std::string message, int messageLen);
-    static Data generateSecretKey(Data seed, CryptoPP::Integer state);
-    static Data hashMany(Data data, int numTimes);
-    static Data combineHashes(std::vector<Data> in);
+    static Data generateSecretKey(Data seed, CryptoPP::Integer state,
+        unsigned int keysize = BLOCKSIZE);
+    static Data hashMany(Data data, int numTimes, unsigned int datasize = BLOCKSIZE);
+    static Data combineHashes(std::vector<Data> in, unsigned int ds = BLOCKSIZE);
 
     // Stateful static functions
     static Data combineHashes(std::vector<Data> in, CryptoPP::Integer state);
@@ -34,7 +35,7 @@ class Winternitz {
     unsigned int calculateT(unsigned int a, unsigned int b);
     unsigned int calculateTPrime(unsigned int a, unsigned int b);
     void calculateChecksum(std::vector<unsigned int> &b);
-    std::vector<Data> generateSecretKeys(Data sk);
+    std::vector<Data> generateSecretKeys(Data sk, unsigned int keysize = BLOCKSIZE);
     std::vector<Data> calculateSig(std::vector<Data> &sk, std::vector<unsigned int> &b);
     Data generatePublicKey(std::vector<Data> &secretKey);
     unsigned int l;
