@@ -12,9 +12,9 @@ void testWinternitz() {
   cout << sig.toString() << endl;
   string message = "This is my message that really needs to get signed";
   string secret = "This is my secret key message thingy";
-  Data sk = Winternitz::hashMessage(secret, secret.size());
+  Data sk = Data::hashMessage(secret, secret.size());
   cout << "sk\t" << sk.toString() << endl;
-  Data digest = Winternitz::hashMessage(message, message.size());
+  Data digest = Data::hashMessage(message, message.size());
   cout << "digest\t" << digest.toString() << endl;
 
   Data pk = sig.getPublicKey(sk);
@@ -26,7 +26,7 @@ void testWinternitz() {
 
 //void testMerkle() {
 //  string secret = "woo woo this is mah secret";
-//  Data sk = Winternitz::hashMessage(secret, secret.size());
+//  Data sk = Data::hashMessage(secret, secret.size());
 //  unsigned int sp = 16;
 //  unsigned int height = 10;
 //  Merkle tree(sk, height, sp);
@@ -35,7 +35,7 @@ void testWinternitz() {
 //  cout << "Public key = " << pk.toString() << endl;
 //
 //  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
-//  Data digest = Winternitz::hashMessage(message, message.size());
+//  Data digest = Data::hashMessage(message, message.size());
 //  for (int i = 0; i < CryptoPP::Integer::Power2(height); i++) {
 //    Merkle::Signature merk = tree.getSignature(digest);
 //    bool veri = Merkle::verifySignature(digest, merk, pk);
@@ -47,7 +47,7 @@ void testWinternitz() {
 
 //void testAdaptive() {
 //  string secret = "woo woo this is mah secret";
-//  Data sk = Winternitz::hashMessage(secret, secret.size());
+//  Data sk = Data::hashMessage(secret, secret.size());
 //  unsigned int numTrees = 2;
 //  vector<unsigned int> depths(3);
 //  depths[0] = 2;
@@ -58,7 +58,7 @@ void testWinternitz() {
 //  Data publicKey = am.getPublicKey();
 //  cout << am.toString() << endl;
 //  string message = "This is a message I really need to sign... MULTIPLE TIMES!";
-//  Data digest = Winternitz::hashMessage(message, message.size());
+//  Data digest = Data::hashMessage(message, message.size());
 //  for (int i =0; i < 17; i++) {
 //    AdaptiveMerkle::Signature sig = am.sign(digest);
 //    bool veri = AdaptiveMerkle::verify(digest, sig, publicKey);

@@ -70,45 +70,36 @@ string Winternitz::toString() {
 }
 
 Data Winternitz::hashMessage(string input, int input_len) {
-  HASH hash;
-  byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
-  HASH().CalculateDigest(abDigest,
-      (byte *) input.c_str(), input_len);
-  return Data(abDigest, DIGESTSIZE);
+  cout << "Bad call to hashMessage!" << endl;
+  return Data::hashMessage(input, input_len);
+  //HASH hash;
+  //byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
+  //HASH().CalculateDigest(abDigest,
+  //    (byte *) input.c_str(), input_len);
+  //return Data(abDigest, DIGESTSIZE);
 }
 
 // TODO: check that state < 2^128
 // TODO: Start state somewhere random
 Data Winternitz::generateSecretKey(Data seed, Integer state, unsigned int keySize) {
-  ECB_Mode< AES >::Encryption e;
-  e.SetKey(seed.bytes, keySize);
-  Data count(state);
-  byte data[keySize];
-  string plain(reinterpret_cast<char const* >(count.bytes), keySize);
-    StringSource(plain, true,
-      new StreamTransformationFilter( e,
-        new ArraySink(data, keySize),
-        StreamTransformationFilter::NO_PADDING
-    )
-  );
-
-  Data cipher(data, keySize);
-  return cipher;
+  cout << "Bad call!" << endl;
+  return Data::generateSecretKey(seed, state, keySize);
 }
 
 // Hashes an input string to a vector of unsigned ints
 Data Winternitz::hashMany(Data data, int lmt, unsigned int datasize) {
-    HASH hash;
-    byte abDigest[DIGESTSIZE];
-    memcpy(abDigest, data.bytes, DATASIZE);
-    // need to be consistant, so we 0 out the rest
-    for (int i = DATASIZE; i < DIGESTSIZE; i++) {
-      abDigest[i] = 0;
-    }
-    for (int i = 0; i < lmt; i++) {
-      HASH().CalculateDigest(abDigest, abDigest, DATASIZE); // DATASIZE = how big the data is -- automatically clip
-    }
-    return Data(abDigest, datasize); // Data automatically clips it to DATASIZE
+  return Data::hashMany(data, lmt, datasize);
+//    HASH hash;
+//    byte abDigest[DIGESTSIZE];
+//    memcpy(abDigest, data.bytes, DATASIZE);
+//    // need to be consistant, so we 0 out the rest
+//    for (int i = DATASIZE; i < DIGESTSIZE; i++) {
+//      abDigest[i] = 0;
+//    }
+//    for (int i = 0; i < lmt; i++) {
+//      HASH().CalculateDigest(abDigest, abDigest, DATASIZE); // DATASIZE = how big the data is -- automatically clip
+//    }
+//    return Data(abDigest, datasize); // Data automatically clips it to DATASIZE
 }
 
 vector<Data> Winternitz::sign(Data digest, Data sk) {
@@ -162,7 +153,7 @@ vector<Data> Winternitz::generateSecretKeys(Data sk, unsigned int keysize) {
   vector<Data> out;
   unsigned int n = t = t_p;
   for (unsigned int i = 0; i < n; i++) {
-    out.push_back(generateSecretKey(sk, i, keysize));
+    out.push_back(Data::generateSecretKey(sk, i, keysize));
   }
   return out;
 }
@@ -175,21 +166,22 @@ Data Winternitz::getPublicKey(Data sk) {
 Data Winternitz::generatePublicKey(vector<Data> &sk) {
   vector<Data> pk;
   for (int i = 0; i < sk.size(); i++) {
-    pk.push_back(hashMany(sk[i],l));
+    pk.push_back(hashMany(sk[i],l, DIGESTSIZE));
   }
   // combine pk into one
   return combineHashes(pk, DIGESTSIZE);
 }
 
 Data Winternitz::combineHashes(vector<Data> in, unsigned int datasize) {
-  HASH hash;
-  for (int i = 0; i < in.size(); i++) {
-    hash.Update(in[i].bytes, DATASIZE);
-  }
-  byte bytes[DIGESTSIZE];
-  hash.Final(bytes);
-  Data digest(bytes, datasize);
-  return digest;
+  return Data::combineHashes(in, datasize);
+  //HASH hash;
+  //for (int i = 0; i < in.size(); i++) {
+  //  hash.Update(in[i].bytes, DATASIZE);
+  //}
+  //byte bytes[DIGESTSIZE];
+  //hash.Final(bytes);
+  //Data digest(bytes, datasize);
+  //return digest;
 }
 
 void statefulData(byte* stateful, Data data, Integer state) {
