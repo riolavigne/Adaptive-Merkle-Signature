@@ -7,7 +7,7 @@
 
 class Winternitz {
   public:
-    Winternitz(unsigned int securityParameter);
+    Winternitz(unsigned int securityParameter, unsigned int sigSize = DIGESTSIZE);
     ~Winternitz(){}
     std::string toString(); // returns sec params of the scheme
     // calculates and returns signature given a message digest
@@ -41,4 +41,5 @@ class Winternitz {
     unsigned int l;
     unsigned int t;
     unsigned int t_p;
+    unsigned int sigSize;
 };

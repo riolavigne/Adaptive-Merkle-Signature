@@ -56,12 +56,12 @@ size_t Data::getSize() {
 }
 
 /* --- Static functions --- */
-Data Data::hashMessage(string input, int input_len){
+Data Data::hashMessage(string input, int input_len, int size){
   HASH hash;
   byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
   HASH().CalculateDigest(abDigest,
       (byte *) input.c_str(), input_len);
-  return Data(abDigest, DIGESTSIZE);
+  return Data(abDigest, size);
 }
 
 // Need to generate 1 or 2 blocks based on keySize
@@ -97,14 +97,14 @@ Data Data::hashMany(Data data, int lmt, unsigned int datasize) {
     for (int i = 0; i < lmt; i++) {
       HASH().CalculateDigest(abDigest, abDigest, datasize);
     }
-    return Data(abDigest, datasize); // Data automatically clips it to DATASIZE
+    return Data(abDigest, datasize);
 }
 
 
 Data Data::combineHashes(vector<Data> in, unsigned int datasize) {
   HASH hash;
   for (int i = 0; i < in.size(); i++) {
-    hash.Update(in[i].bytes, datasize);
+    hash.Update(in[i].bytes, in[i].getSize());
   }
   byte bytes[DIGESTSIZE];
   hash.Final(bytes);

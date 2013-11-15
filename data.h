@@ -20,11 +20,18 @@ class Data {
     byte bytes[MSGSIZE];
 
     // Static functions
-    static Data hashMessage(std::string message, int messageLen);
+
+    // Hashes a message to size bytes: default 32 bytes
+    static Data hashMessage(std::string message, int messageLen, int size=MSGSIZE);
+    // Generates a secret key based on a seed, an integer state, and
+    // optional keysize (BLOCKSIZE)
     static Data generateSecretKey(Data seed, CryptoPP::Integer state,
         unsigned int keysize = BLOCKSIZE);
+    // Hashes some data many times
+    // Hashes to BLOCKSIZE unless given otherwise
     static Data hashMany(Data data, int numTimes, unsigned int datasize = BLOCKSIZE);
-    static Data combineHashes(std::vector<Data> in, unsigned int ds = BLOCKSIZE);
+    // Combines a vector of hashes into one hash
+    static Data combineHashes(std::vector<Data> in, unsigned int datasize = BLOCKSIZE);
 
   private:
     size_t size;

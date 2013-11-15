@@ -1,4 +1,4 @@
-// winternitz
+//sign winternitz
 
 #include <sstream>
 using namespace std;
@@ -38,10 +38,11 @@ void printBinary(Data in) {
 
 // initialize for creating a winternitz signature...
 // Maybe everything should be static -- to decide later :)
-Winternitz::Winternitz(unsigned int securityParameter) {
+Winternitz::Winternitz(unsigned int securityParameter, unsigned int sigSizeIn) {
   l = securityParameter;
   t = calculateT(MSGSIZE*8, l);
   t_p = calculateTPrime(t, l);
+  sigSize = sigSizeIn;
 }
 
 // calculates ceiling (a / log_2 b)
@@ -72,39 +73,22 @@ string Winternitz::toString() {
 Data Winternitz::hashMessage(string input, int input_len) {
   cout << "Bad call to hashMessage!" << endl;
   return Data::hashMessage(input, input_len);
-  //HASH hash;
-  //byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
-  //HASH().CalculateDigest(abDigest,
-  //    (byte *) input.c_str(), input_len);
-  //return Data(abDigest, DIGESTSIZE);
 }
 
-// TODO: check that state < 2^128
-// TODO: Start state somewhere random
 Data Winternitz::generateSecretKey(Data seed, Integer state, unsigned int keySize) {
-  cout << "Bad call!" << endl;
+  cout << "Bad generateSecretKey" << endl;
   return Data::generateSecretKey(seed, state, keySize);
 }
 
 // Hashes an input string to a vector of unsigned ints
 Data Winternitz::hashMany(Data data, int lmt, unsigned int datasize) {
+  cout << "bad hashmany." << endl;
   return Data::hashMany(data, lmt, datasize);
-//    HASH hash;
-//    byte abDigest[DIGESTSIZE];
-//    memcpy(abDigest, data.bytes, DATASIZE);
-//    // need to be consistant, so we 0 out the rest
-//    for (int i = DATASIZE; i < DIGESTSIZE; i++) {
-//      abDigest[i] = 0;
-//    }
-//    for (int i = 0; i < lmt; i++) {
-//      HASH().CalculateDigest(abDigest, abDigest, DATASIZE); // DATASIZE = how big the data is -- automatically clip
-//    }
-//    return Data(abDigest, datasize); // Data automatically clips it to DATASIZE
 }
 
 vector<Data> Winternitz::sign(Data digest, Data sk) {
   vector<unsigned int> b = generateB(digest);
-  vector<Data> secretKey = generateSecretKeys(sk, DIGESTSIZE);
+  vector<Data> secretKey = generateSecretKeys(sk, sigSize);
   vector<Data> sig = calculateSig(secretKey, b);
   return sig;
 }
@@ -144,7 +128,7 @@ void Winternitz::calculateChecksum(vector<unsigned int> &b) {
 vector<Data> Winternitz::calculateSig(vector<Data> &sk, vector<unsigned int> &b) {
   vector<Data> sig;
   for (int i = 0; i < sk.size(); i++) {
-    sig.push_back(hashMany(sk[i],b[i], DIGESTSIZE));
+    sig.push_back(Data::hashMany(sk[i],b[i], sigSize));
   }
   return sig;
 }
@@ -159,29 +143,22 @@ vector<Data> Winternitz::generateSecretKeys(Data sk, unsigned int keysize) {
 }
 
 Data Winternitz::getPublicKey(Data sk) {
-  vector<Data> secretKey = generateSecretKeys(sk, DIGESTSIZE);
+  vector<Data> secretKey = generateSecretKeys(sk, sigSize);
   return generatePublicKey(secretKey);
 }
 
 Data Winternitz::generatePublicKey(vector<Data> &sk) {
   vector<Data> pk;
   for (int i = 0; i < sk.size(); i++) {
-    pk.push_back(hashMany(sk[i],l, DIGESTSIZE));
+    pk.push_back(Data::hashMany(sk[i],l, sigSize));
   }
   // combine pk into one
-  return combineHashes(pk, DIGESTSIZE);
+  return Data::combineHashes(pk, sigSize);
 }
 
 Data Winternitz::combineHashes(vector<Data> in, unsigned int datasize) {
+  cout << "bad combine." << endl;
   return Data::combineHashes(in, datasize);
-  //HASH hash;
-  //for (int i = 0; i < in.size(); i++) {
-  //  hash.Update(in[i].bytes, DATASIZE);
-  //}
-  //byte bytes[DIGESTSIZE];
-  //hash.Final(bytes);
-  //Data digest(bytes, datasize);
-  //return digest;
 }
 
 void statefulData(byte* stateful, Data data, Integer state) {
@@ -217,8 +194,8 @@ Data Winternitz::calculateVerifiedSig(Data digest, vector<Data> &sig) {
   vector<unsigned int> b = generateB(digest);
   vector<Data> verified;
   for (int i = 0; i < sig.size(); i++) {
-    verified.push_back(hashMany(sig[i], l - b[i], DIGESTSIZE));
+    verified.push_back(Data::hashMany(sig[i], l - b[i], sigSize));
   }
-  return combineHashes(verified, DIGESTSIZE);
+  return Data::combineHashes(verified, sigSize);
 }
 
