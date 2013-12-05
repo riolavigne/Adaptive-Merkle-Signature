@@ -16,11 +16,11 @@ class Data {
     Data(CryptoPP::Integer data, unsigned int size = BLOCKSIZE);
     ~Data();
     std::string toString();
-    size_t getSize();
-    byte bytes[MSGSIZE];
+
+    size_t size();
+    byte bytes[MSGSIZE]; //TODO
 
     // Static functions
-
     // Hashes a message to size bytes: default 32 bytes
     static Data hashMessage(std::string message, int messageLen, int size=MSGSIZE);
     // Generates a secret key based on a seed, an integer state, and
@@ -33,6 +33,9 @@ class Data {
     // Combines a vector of hashes into one hash
     static Data combineHashes(std::vector<Data> in, unsigned int datasize = BLOCKSIZE);
 
+    static CryptoPP::Integer totalHashes();
+
   private:
-    size_t size;
+    int m_size;
 };
+

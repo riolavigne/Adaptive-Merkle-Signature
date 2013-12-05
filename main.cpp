@@ -91,7 +91,7 @@ void testAdaptive() {
 
 int main(int, char**) {
   //testWinternitz();
-  //testMerkle();
-  testAdaptive();
+  testMerkle();
+  //testAdaptive();
   return 0;
 }

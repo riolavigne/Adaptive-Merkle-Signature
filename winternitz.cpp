@@ -19,30 +19,13 @@ using namespace CryptoPP;
 #define MSGSIZE 32
 #define HASH SHA256
 
-void printVec(vector<Data> in) {
-  cout << "[ ";
-  for (int i = 0; i < in.size(); i++) {
-    cout << in[i].toString() << ", ";
-  }
-  cout << " ]" << endl;
-}
-
-void printBinary(Data in) {
-  Integer bin(in.bytes, BLOCKSIZE);
-  for (int i = 0; i < BLOCKSIZE; i++) {
-    if (bin % 2 == 0) cout << "0";
-    else cout << "1";
-    bin /= 2;
-  }
-}
-
-// initialize for creating a winternitz signature...
-// Maybe everything should be static -- to decide later :)
-Winternitz::Winternitz(unsigned int securityParameter, unsigned int sigSizeIn) {
-  l = securityParameter;
-  t = calculateT(MSGSIZE*8, l);
+// initialize for creating a winternitz signature
+Winternitz::Winternitz(Data sk, unsigned int ell) {
+  sigSize = sk.size();
+  l = ell;
+  t = calculateT(sigSize*8, l);
   t_p = calculateTPrime(t, l);
-  sigSize = sigSizeIn;
+  generateSecretKeys(sk);
 }
 
 // calculates ceiling (a / log_2 b)
@@ -50,18 +33,16 @@ unsigned int Winternitz::calculateT(unsigned int a, unsigned int b) {
   double l = static_cast<double>(b);
   double n = static_cast<double>(a);
   double denominator = log(l) / log(2.0);
-  // make sure we ceiling!
-  return static_cast<unsigned int>((n + denominator - 1.0)/ denominator);
+  return ceil(n / denominator);
 }
 
 unsigned int Winternitz::calculateTPrime(unsigned int a, unsigned int b) {
   double l = static_cast<double>(b);
   double t = static_cast<double>(a);
-  double denominator = log(l) / log(2.0);
-  double numerator = log(t * l) / log(2.0) + denominator - 1.0;
-  return static_cast<unsigned int>(numerator / denominator);
+  double numerator = log(t * l);
+  double denominator = log(l);
+  return ceil(numerator / denominator);
 }
-
 
 string Winternitz::toString() {
   unsigned int n = t + t_p;
@@ -70,50 +51,34 @@ string Winternitz::toString() {
   return ss.str();
 }
 
-Data Winternitz::hashMessage(string input, int input_len) {
-  cout << "Bad call to hashMessage!" << endl;
-  return Data::hashMessage(input, input_len);
-}
-
-Data Winternitz::generateSecretKey(Data seed, Integer state, unsigned int keySize) {
-  cout << "Bad generateSecretKey" << endl;
-  return Data::generateSecretKey(seed, state, keySize);
-}
-
-// Hashes an input string to a vector of unsigned ints
-Data Winternitz::hashMany(Data data, int lmt, unsigned int datasize) {
-  cout << "bad hashmany." << endl;
-  return Data::hashMany(data, lmt, datasize);
-}
-
-vector<Data> Winternitz::sign(Data digest, Data sk) {
-  vector<unsigned int> b = generateB(digest);
-  vector<Data> secretKey = generateSecretKeys(sk, sigSize);
+vector<Data> Winternitz::sign(Data digest) {
+  vector<unsigned int> b = generateB(digest, t, t_p, l);
   vector<Data> sig = calculateSig(secretKey, b);
   return sig;
 }
 
-vector<unsigned int> Winternitz::generateB(Data digest) {
-  vector<unsigned int> b = convertToBase(digest);
-  calculateChecksum(b);
+vector<unsigned int> Winternitz::generateB(Data digest, unsigned int t, unsigned int t_p, unsigned int l) {
+  vector<unsigned int> b = convertToBase(digest, t, l);
+  calculateChecksum(b, l, t_p);
   return b;
 }
 
-vector<unsigned int> Winternitz::convertToBase(Data data) {
+vector<unsigned int> Winternitz::convertToBase(Data data, unsigned int t, unsigned int l) {
   CryptoPP::Integer dec(data.bytes, DATASIZE);
-  return convertIntegerToBase(dec);
+  return convertIntegerToBase(dec, t, l);
 }
 
-vector<unsigned int> Winternitz::convertIntegerToBase(CryptoPP::Integer dec) {
+vector<unsigned int> Winternitz::convertIntegerToBase(CryptoPP::Integer dec, unsigned int t, unsigned int l) {
   vector<unsigned int> result;
-  for (int i = 0; i < t; i++) { // want exactly log, even if it fits in less...
+  for (int i = 0; i < t; i++) {
+    // want exactly log, even if it fits in less...
     result.push_back(dec % l);
     dec /= l;
   }
   return result;
 }
 
-void Winternitz::calculateChecksum(vector<unsigned int> &b) {
+void Winternitz::calculateChecksum(vector<unsigned int> &b, unsigned int l, unsigned int t_p) {
   CryptoPP::Integer total = 0;
   for (unsigned int i = 0; i < b.size(); i++) {
     total += l - b[i];
@@ -128,74 +93,45 @@ void Winternitz::calculateChecksum(vector<unsigned int> &b) {
 vector<Data> Winternitz::calculateSig(vector<Data> &sk, vector<unsigned int> &b) {
   vector<Data> sig;
   for (int i = 0; i < sk.size(); i++) {
-    sig.push_back(Data::hashMany(sk[i],b[i], sigSize));
+    sig.push_back(Data::hashMany(sk[i],b[i], BLOCKSIZE));
   }
   return sig;
 }
 
-vector<Data> Winternitz::generateSecretKeys(Data sk, unsigned int keysize) {
-  vector<Data> out;
-  unsigned int n = t = t_p;
+void Winternitz::generateSecretKeys(Data sk) {
+  unsigned int n = t + t_p;
   for (unsigned int i = 0; i < n; i++) {
-    out.push_back(Data::generateSecretKey(sk, i, keysize));
+    secretKey.push_back(Data::generateSecretKey(sk, i, sk.size()));
   }
-  return out;
 }
 
-Data Winternitz::getPublicKey(Data sk) {
-  vector<Data> secretKey = generateSecretKeys(sk, sigSize);
+Data Winternitz::getPublicKey() {
   return generatePublicKey(secretKey);
 }
 
 Data Winternitz::generatePublicKey(vector<Data> &sk) {
   vector<Data> pk;
   for (int i = 0; i < sk.size(); i++) {
-    pk.push_back(Data::hashMany(sk[i],l, sigSize));
+    pk.push_back(Data::hashMany(sk[i],l, BLOCKSIZE));
   }
   // combine pk into one
-  return Data::combineHashes(pk, sigSize);
+  return Data::combineHashes(pk, BLOCKSIZE);
 }
 
-Data Winternitz::combineHashes(vector<Data> in, unsigned int datasize) {
-  cout << "bad combine." << endl;
-  return Data::combineHashes(in, datasize);
+bool Winternitz::verifySignature(Data digest, vector<Data> &sig, Data publicKey, unsigned int ell) {
+  Data verified = calculateVerifiedSig(digest, sig, ell);
+  return (0 == memcmp(verified.bytes, publicKey.bytes, BLOCKSIZE));
 }
 
-void statefulData(byte* stateful, Data data, Integer state) {
-  Data dataState(state);
-  for (int i = 0; i < DATASIZE; i++) {
-    stateful[i] = data.bytes[i];
-  }
-  for (int i = DATASIZE; i < BLOCKSIZE; i++) {
-    stateful[i] = dataState.bytes[i];
-  }
-}
-
-// TODO: check that state < 2^128
-Data Winternitz::combineHashes(vector<Data> in, Integer state) {
-  HASH hash;
-  byte stateful[BLOCKSIZE];
-  for (int i = 0; i < in.size(); i++) {
-    statefulData(stateful, in[i], state);
-    hash.Update(stateful, BLOCKSIZE);
-  }
-  byte bytes[DIGESTSIZE];
-  hash.Final(bytes);
-  Data digest(bytes);
-  return digest;
-}
-
-bool Winternitz::verifySignature(Data digest, vector<Data> &sig, Data publicKey) {
-  Data verified = calculateVerifiedSig(digest, sig);
-  return (0 == memcmp(verified.bytes, publicKey.bytes, DATASIZE));
-}
-
-Data Winternitz::calculateVerifiedSig(Data digest, vector<Data> &sig) {
-  vector<unsigned int> b = generateB(digest);
+Data Winternitz::calculateVerifiedSig(Data digest, vector<Data> &sig, unsigned int ell) {
+  unsigned int t = calculateT(digest.size()*8, ell);
+  unsigned int t_p = calculateTPrime(t, ell);
+  //n = t + t_p;
+  vector<unsigned int> b = generateB(digest, t, t_p, ell);
   vector<Data> verified;
   for (int i = 0; i < sig.size(); i++) {
-    verified.push_back(Data::hashMany(sig[i], l - b[i], sigSize));
+    verified.push_back(Data::hashMany(sig[i], ell - b[i], BLOCKSIZE));
   }
-  return Data::combineHashes(verified, sigSize);
+  return Data::combineHashes(verified, BLOCKSIZE);
 }
 

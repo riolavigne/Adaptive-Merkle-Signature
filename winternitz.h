@@ -7,39 +7,34 @@
 
 class Winternitz {
   public:
-    Winternitz(unsigned int securityParameter, unsigned int sigSize = DIGESTSIZE);
+    Winternitz(Data sk, unsigned int ell);
     ~Winternitz(){}
     std::string toString(); // returns sec params of the scheme
     // calculates and returns signature given a message digest
-    std::vector<Data> sign(Data digest, Data sk);
+    std::vector<Data> sign(Data digest);
     // calculates and returns public key given sk
-    Data getPublicKey(Data sk);
+    Data getPublicKey();
     // calculates the verifiable signature
-    bool verifySignature(Data digest, std::vector<Data> &sig, Data publicKey);
-    Data calculateVerifiedSig(Data digest, std::vector<Data> &sig);
+    // not static because we want to initialize security parameters
 
-    // Static functions
-    static Data hashMessage(std::string message, int messageLen);
-    static Data generateSecretKey(Data seed, CryptoPP::Integer state,
-        unsigned int keysize = BLOCKSIZE);
-    static Data hashMany(Data data, int numTimes, unsigned int datasize = BLOCKSIZE);
-    static Data combineHashes(std::vector<Data> in, unsigned int ds = BLOCKSIZE);
-
-    // Stateful static functions
-    static Data combineHashes(std::vector<Data> in, CryptoPP::Integer state);
-
+    static bool verifySignature(Data digest, std::vector<Data> &sig, Data publicKey, unsigned int ell);
+    static Data calculateVerifiedSig(Data digest, std::vector<Data> &sig, unsigned int ell);
   private:
-    std::vector<unsigned int> generateB(Data digest);
-    std::vector<unsigned int> convertToBase(Data digest);
-    std::vector<unsigned int> convertIntegerToBase(CryptoPP::Integer dec);
-    unsigned int calculateT(unsigned int a, unsigned int b);
-    unsigned int calculateTPrime(unsigned int a, unsigned int b);
-    void calculateChecksum(std::vector<unsigned int> &b);
-    std::vector<Data> generateSecretKeys(Data sk, unsigned int keysize = BLOCKSIZE);
-    std::vector<Data> calculateSig(std::vector<Data> &sk, std::vector<unsigned int> &b);
-    Data generatePublicKey(std::vector<Data> &secretKey);
     unsigned int l;
     unsigned int t;
     unsigned int t_p;
     unsigned int sigSize;
+    std::vector<Data> secretKey;
+
+    // static things
+    static std::vector<unsigned int> generateB(Data digest, unsigned int t, unsigned int t_p, unsigned int l);
+    static std::vector<unsigned int> convertToBase(Data digest, unsigned int t, unsigned int l);
+    static std::vector<unsigned int> convertIntegerToBase(CryptoPP::Integer dec, unsigned int t, unsigned int l);
+    Data generatePublicKey(std::vector<Data> &secretKey);
+    static void calculateChecksum(std::vector<unsigned int> &b, unsigned int l, unsigned int t_p);
+    static unsigned int calculateT(unsigned int a, unsigned int b);
+    static unsigned int calculateTPrime(unsigned int a, unsigned int b);
+    void generateSecretKeys(Data sk);
+    std::vector<Data> calculateSig(std::vector<Data> &sk, std::vector<unsigned int> &b);
+
 };
