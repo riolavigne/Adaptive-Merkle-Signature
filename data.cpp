@@ -1,47 +1,65 @@
-
 #include "cryptopp/base64.h"
 #include "cryptopp/modes.h"
 #include "cryptopp/filters.h"
 #include "cryptopp/aes.h"
-using namespace CryptoPP;
+#include "cryptopp/osrng.h" // PRNG
 
-using namespace std;
+#include "cryptopp/rijndael.h" // plain AES??
 
 #include "data.h"
 
-#define DIGESTSIZE SHA256::DIGESTSIZE
+using namespace std;
+using namespace CryptoPP;
+
 #define HASH SHA256
+
+class datasizeException: public exception {
+  virtual const char* what() const throw() {
+    return "Incorrect size for data. Must be 16 or 32 bytes.";
+  }
+} datasizeEx;
+
 
 static CryptoPP::Integer numHashes = 0;
 
 Data::Data() {
-  // nuffin
+  // Empty constructor
 }
 
-Data::Data(byte* inData, size_t sizeIn /*=BLOCKSIZE*/) {
+/*
+ * Convert array of bites into Data class
+ * Given size of the array.
+ * Array size should be either kDigestSize or kBlockSize
+ */
+Data::Data(byte* inData, size_t sizeIn /*=kBlockSize*/) {
+  if (!(sizeIn == kBlockSize || sizeIn == kDigestSize)){
+    throw datasizeEx;
+  }
   m_size = sizeIn;
   memcpy(bytes, inData, sizeIn);
 }
 
-// constructor for base64 encoded string to data
-Data::Data(string encoded) {
-  Base64Decoder decoder;
-  decoder.Attach(new ArraySink(bytes, BLOCKSIZE));
-  decoder.Put((byte *)encoded.data(), encoded.size());
-  decoder.MessageEnd();
-}
-
-// takes a cryptopp int and converts it into 16 byte representation
+/*
+ * Convert a CryptoPP Integer into a byte array of sizeIn
+ */
 Data::Data(Integer num, unsigned int sizeIn) {
+  if (!(sizeIn == kBlockSize || sizeIn == kDigestSize)){
+    throw datasizeEx;
+  }
   num.Encode(bytes, sizeIn);
   m_size = sizeIn;
 }
 
 Data::~Data() {
-  // don't need to do or free up anything.
+  // Destructor doesn't need to do anything.
+  // Everything is allocated on the stack,
+  // and I want to keep it that way.
 }
 
-// byte -> string
+/*
+ * Converts the array of bytes into a base64 string
+ * Mostly for debugging purposes.
+ */
 string Data::toString() {
   CryptoPP::Base64Encoder encoder;
   string output;
@@ -51,32 +69,76 @@ string Data::toString() {
   return output.substr(0,output.size() - 1);
 }
 
-// size
+/*
+ * Returns the number of bytes in the byte array
+ */
 size_t Data::size() {
   return m_size;
 }
 
+
 /* --- Static functions --- */
+
+/*
+ * Hashes a string into a data object.
+ */
 Data Data::hashMessage(string input, int input_len, int size){
   HASH hash;
-  byte abDigest[DIGESTSIZE]; // Same as msgsize, but this describes it better
+  byte abDigest[kDigestSize]; // Same as msgsize, but this describes it better
   HASH().CalculateDigest(abDigest,
       (byte *) input.c_str(), input_len);
   numHashes++;
   return Data(abDigest, size);
 }
 
-// Need to generate 1 or 2 blocks based on keySize
-// Block size = 16
-// Key size = 16 or 32
+/*
+ * Hashes the bytes in a Data object lmt number of times.
+ * Returns an Data object of size datasize.
+ * Very useful for Winternitz scheme.
+ * To hash something once, use lmt = 1.
+ */
+Data Data::hashMany(Data data, int lmt, unsigned int datasize) {
+  HASH hash;
+  byte abDigest[kDigestSize];
+  memcpy(abDigest, data.bytes, datasize);
+  // need to be consistant, so we 0 out the rest
+  for (unsigned int i = datasize; i < kDigestSize; i++) {
+    abDigest[i] = 0;
+  }
+  for (int i = 0; i < lmt; i++) {
+    HASH().CalculateDigest(abDigest, abDigest, datasize);
+    numHashes++;
+  }
+  return Data(abDigest, datasize);
+}
+
+/*
+ * Combines all of the Data objects in 'in' by hashing
+ * them into a single Data object of size datasize
+ */
+Data Data::combineHashes(vector<Data> in, unsigned int datasize) {
+  HASH hash;
+  for (size_t i = 0; i < in.size(); i++) {
+    hash.Update(in[i].bytes, in[i].size());
+  }
+  byte bytes[kDigestSize];
+  hash.Final(bytes);
+  numHashes++;
+  Data digest(bytes, datasize);
+  return digest;
+}
+
+/*
+ * Generates a psuedorandom secret given a seed.
+ */
 Data Data::generateSecretKey(Data seed, CryptoPP::Integer state, unsigned int
     keySize) {
-  CBC_Mode<AES>::Encryption e;
-  Data iv(CryptoPP::Integer(), BLOCKSIZE); // AES Blocksize = BLOCKSIZE (16)
-  e.SetKeyWithIV(seed.bytes, keySize, iv.bytes);
-  Data count(state, BLOCKSIZE);
+  CTR_Mode<AES>::Encryption e; // TODO: I am looking for access to raw AES.
+  Data iv(CryptoPP::Integer(), kBlockSize); // AES Blocksize = kBlockSize (16)
+  e.SetKeyWithIV(seed.bytes, keySize, iv.bytes); // iv is the counter
+  Data count(state, kBlockSize);
   byte data[keySize];
-  for (int i = 0; i < keySize; i+= BLOCKSIZE) {
+  for (unsigned int i = 0; i < keySize; i+= kBlockSize) {
     ArraySource(count.bytes, count.size(), true,
         new StreamTransformationFilter(e,
           new ArraySink(data + i, keySize),
@@ -89,36 +151,11 @@ Data Data::generateSecretKey(Data seed, CryptoPP::Integer state, unsigned int
   return cipher;
 }
 
-Data Data::hashMany(Data data, int lmt, unsigned int datasize) {
-  HASH hash;
-  byte abDigest[DIGESTSIZE];
-  memcpy(abDigest, data.bytes, datasize);
-  // need to be consistant, so we 0 out the rest
-  for (int i = datasize; i < DIGESTSIZE; i++) {
-    abDigest[i] = 0;
-  }
-  for (int i = 0; i < lmt; i++) {
-    HASH().CalculateDigest(abDigest, abDigest, datasize);
-    numHashes++;
-  }
-  return Data(abDigest, datasize);
-}
-
-
-Data Data::combineHashes(vector<Data> in, unsigned int datasize) {
-  HASH hash;
-  for (int i = 0; i < in.size(); i++) {
-    hash.Update(in[i].bytes, in[i].size());
-  }
-  byte bytes[DIGESTSIZE];
-  hash.Final(bytes);
-  numHashes++;
-  Data digest(bytes, datasize);
-  return digest;
-}
-
+/*
+ * Returns the total number of hashes counted so far.
+ * Useful for debugging and testing performance.
+ */
 CryptoPP::Integer Data::totalHashes() {
   return numHashes;
 }
-
 
