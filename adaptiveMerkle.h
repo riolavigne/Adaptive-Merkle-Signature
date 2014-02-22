@@ -19,6 +19,8 @@ class AdaptiveMerkle {
     AdaptiveMerkle::Signature sign(Data digest);
     // returns the number of messages that can still be signed by the object
     CryptoPP::Integer getMessagesLeft();
+    // Returns the total size of the structure in bytes
+    CryptoPP::Integer getSize();
 
     // --- static methods --- //
     static bool verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, unsigned int ell1, unsigned int ell2);
@@ -39,7 +41,7 @@ class AdaptiveMerkle {
 
     // Initializes a merkle tree of specified depth, ell, and a
     // boolean to tell if the tree is a bottom tree or not.
-    Merkle initTree(unsigned int depth, unsigned int ell, bool isBottom);
+    Merkle initTree(unsigned int depth, unsigned int ell);
     // Initializes the first signature. Signature stored in memory and
     // updated with each signing.
     void initSig();

@@ -202,6 +202,27 @@ Data Merkle::getPublicKey(){
 }
 
 /*
+ * Calculates and returns the size of the Merkle Tree object in bytes
+ */
+CryptoPP::Integer Merkle::getSize() {
+  CryptoPP::Integer size = sizeof(unsigned int) * 3;
+  for (size_t i = 0; i < tree.size(); i++){
+    for (size_t j = 0; j < tree[i].size(); j++) {
+      size+= tree[i][j].size();
+    }
+  }
+  for (size_t i = 0; i < winter.size(); i++) {
+    size += winter[i].getSize();
+  }
+  size += s.size();
+  size += sizeof(buildingState);
+  size += secretKey.size();
+  size += sizeof(msg);
+  size += sizeof(initialized);
+  return size;
+}
+
+/*
  * Verifies if a signature is valid given the message digest, signature,
  * real public key, and winternitz parameter ell.
  */

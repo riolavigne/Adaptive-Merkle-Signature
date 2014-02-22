@@ -57,6 +57,17 @@ Data Winternitz::getPublicKey() {
   return generatePublicKey();
 }
 
+/*
+ * Calculates and returns the size of the Winternitz object in bytes.
+ */
+long Winternitz::getSize() {
+  long size = sizeof(unsigned int)*3;
+  for (size_t i = 0; i < secretKey.size(); i++) {
+    size += secretKey[i].size();
+  }
+  return size;
+}
+
 /* --- Static Functions For Verification --- */
 /*
  * Verifies whether or not a signature is valid

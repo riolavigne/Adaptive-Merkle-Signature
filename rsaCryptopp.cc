@@ -51,6 +51,7 @@ int main(int, char**) {
   RSA::PublicKey publicKey(params);
   double setupTime = endTimer();
   cout << "Setup completed." << endl;
+  size_t inmem = sizeof(params) + sizeof(privateKey) + sizeof(publicKey);
 
   string message = "RSA Signature", signature;
   Data msg = Data::hashMessage(message, message.size(), DIGESTSIZE);
@@ -64,6 +65,7 @@ int main(int, char**) {
      ) // SignerFilter
   ); // StringSource
   double signingTime = endTimer();
+  size_t sigSize = signature.length();
   cout << "Signing Time = " << signingTime << "ms " << endl;
 
   // verifying
@@ -80,9 +82,8 @@ int main(int, char**) {
   cout << "No exception thrown. Verified." << endl;
 
   cout << "---------------------------" << endl;
-  cout << "Setup:\t" << setupTime << "ms"<<endl;
-  cout << "Signing:\t" << signingTime << "ms"<<endl;
-  cout << "Verifying:\t" << verifyingTime << "ms"<<endl;
+  cout << "capacity\tSize\tSetup\tSigning\tVerifying\tSpace" <<endl;
+  cout << "        \t"<<sigSize<<"\t"<<setupTime/1000<<"\t"<<signingTime<<"\t"<<verifyingTime<<"\t\t"<<inmem<<endl;
 
   return 0;
 }

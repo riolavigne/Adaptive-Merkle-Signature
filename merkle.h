@@ -46,6 +46,9 @@ class Merkle {
     // Returns the public key -- completes building the tree if necessary
     Data getPublicKey();
 
+    // Returns the size the object is taking up in bytes.
+    CryptoPP::Integer getSize();
+
     /* --- Static Functions For Verification --- */
     // Verifies if a given signature is valid given the message digest,
     // Merkle signature, public key, and Winternitz parameter ell.
@@ -55,7 +58,7 @@ class Merkle {
     // signature (and Winternitz parameter ell).
     static Data calculatePublicKey(Data digest, Merkle::Signature sig, unsigned int ell);
 
-  protected:
+  private:
     // A node in the Merkle tree
     struct Node {
       Data data;
@@ -81,8 +84,7 @@ class Merkle {
     // Message number. Hopefully it won't go above 2^64 messages, but just in
     // case we will use the Integer class
     CryptoPP::Integer msg;
-    // Is the tree a bottom tree or not: if it is, the leaves are meant to take
-    // Size of the digest we want to sign: usually 16 or 32 bytes
+    // Size of the digest we want to sign: 16 or 32 bytes
     unsigned int digestsize;
     // Whether or not it is initialized.
     bool initialized;

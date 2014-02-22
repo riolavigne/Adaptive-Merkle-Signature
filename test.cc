@@ -70,16 +70,16 @@ void adaptiveTest() {
   unsigned int ell1 = 50;
   unsigned int ell2 = 50;
   CryptoPP::Integer numSigs = 1;
-  unsigned int treeSize = 10;
-  unsigned int numTrees = 4;
+  unsigned int treeSize = 8;
+  unsigned int numTrees = 3;
   vector<unsigned int> depths(numTrees);
-  //depths[0] = 15; numSigs *= (1 << depths[0]);
-  //depths[1] = 13; numSigs *= (1 << depths[1]);
-  //depths[2] = 12; numSigs *= (1 << depths[2]);
-  for (unsigned int i = 0; i < numTrees; i++) {
-    depths[i] = treeSize;
-    numSigs *= (1 << depths[i]);
-  }
+  depths[0] = 15; numSigs *= (1 << depths[0]);
+  depths[1] = 13; numSigs *= (1 << depths[1]);
+  depths[2] = 12; numSigs *= (1 << depths[2]);
+  //for (unsigned int i = 0; i < numTrees; i++) {
+  //  depths[i] = treeSize;
+  //  numSigs *= (1 << depths[i]);
+  //}
   cout << "numSigs = " << numSigs << endl;
   if (numSigs > 1<<10) numSigs = 1<<10;
 
@@ -150,10 +150,13 @@ void adaptiveTest() {
 
   sign /= numSigs.ConvertToLong(); signHC /= numSigs;
   veri /= numSigs.ConvertToLong(); veriHC /= numSigs;
-  cout << "Sig size\t" << sigsize<<" bytes\t" << sigsize/1024 <<" kb" <<endl;
+  cout << "Sig size\t" << sigsize<<" bytes\t" << (double) sigsize/1024.0 <<" kb" <<endl;
+  cout << "---------------------------" << endl;
+  cout << "capacity\tSize\tSetup\tSigning\tVerifying\tSpace" <<endl;
+  cout << "2^40    \t"<<sigsize<<"\t"<<setup/1000<<"\t"<<sign<<"\t"<<veri<<"\t\t"<<am.getSize()<<endl;
 
-  printResults(success, setup, sign, veri,
-      setupHC, signHC, veriHC);
+  //printResults(success, setup, sign, veri,
+  //    setupHC, signHC, veriHC);
 }
 
 void merkleTest() {

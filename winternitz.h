@@ -20,6 +20,9 @@ class Winternitz {
     // calculates and returns public key given sk
     Data getPublicKey();
 
+    // Returns the size of the Winternitz Signature object
+    long getSize();
+
     /* --- Static Functions For Verification --- */
 
     // Verifies if a signature is valid given digest,

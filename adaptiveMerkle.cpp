@@ -4,7 +4,6 @@
 
 using namespace std;
 
-#define BLOCKSIZE 16
 #define DIGESTSIZE 32
 
 /*
@@ -25,10 +24,10 @@ AdaptiveMerkle::AdaptiveMerkle(vector<unsigned int> treeSizesIn, Data sk,
   ell2 = ell2In;
   secretKey = sk;
   treeSizes = treeSizesIn;
-  exist.push_back(initTree(treeSizes[0], ell1, true)); // 32 bytes, is a bottom tree
+  exist.push_back(initTree(treeSizes[0], ell1)); // Bottom tree
   msgsLeft = 1 << treeSizes[0];
   for (size_t i = 1; i < treeSizes.size(); i++) {
-    exist.push_back(initTree(treeSizes[i], ell2, false)); // 16 bytes, not bottom
+    exist.push_back(initTree(treeSizes[i], ell2)); // Not bottom
     msgsLeft *= 1 << treeSizes[i];
   }
   desired = vector<Merkle>(treeSizes.size());
@@ -92,6 +91,20 @@ CryptoPP::Integer AdaptiveMerkle::getMessagesLeft() {
   return msgsLeft;
 }
 
+/*
+ * Calculates and returns the size of the entire signature structure in bytes
+ */
+CryptoPP::Integer AdaptiveMerkle::getSize() {
+  CryptoPP::Integer size = secretKey.size();
+  size += sizeof(unsigned int) * 3;
+  size += sizeof(msgsLeft);
+  for (size_t i = 0; i < treeSizes.size(); i++) {
+    size += sizeof(unsigned int);
+    size += exist[i].getSize()*2;
+  }
+  return size;
+}
+
 /* ------ Static Functions ------ */
 
 /*
@@ -125,16 +138,11 @@ Data AdaptiveMerkle::calculatePublicKey(Data digest, AdaptiveMerkle::Signature s
 /* ----------- Private Member Functions ------------ */
 
 /*
- * Initializes a merkle tree of a specified depth and ell. The isBottom
- * parameter determines if a tree is one of the bottommost or not. If it
- * is a bottom tree, then that tree must be capable of signing digests that
- * are 32 bytes. Otherwise, the tree only has to sign digests that are 16
- * bytes.
+ * Initializes a merkle tree of a specified depth and ell.
  */
-Merkle AdaptiveMerkle::initTree(unsigned int depth, unsigned int ell, bool isBottom) {
-  unsigned int nodeSize = (isBottom) ? DIGESTSIZE : DIGESTSIZE;
-  Data sk = Data::generateSecretKey(secretKey, state, nodeSize);
-  Merkle tree(sk, depth, nodeSize, ell);
+Merkle AdaptiveMerkle::initTree(unsigned int depth, unsigned int ell) {
+  Data sk = Data::generateSecretKey(secretKey, state, DIGESTSIZE);
+  Merkle tree(sk, depth, DIGESTSIZE, ell);
   tree.buildTree();
   state++;
   return tree;
@@ -195,13 +203,8 @@ void AdaptiveMerkle::update(Data digest) {
 void AdaptiveMerkle::initialize(unsigned int treeNum) {
   Data sk = Data::generateSecretKey(secretKey, state);
   state++;
-  unsigned int ell = ell2;
-  bool bottom = false;
-  if (treeNum == 0){
-    ell = ell1;
-    bottom = true;
-  }
-  desired[treeNum].init(sk, treeSizes[treeNum], bottom ? DIGESTSIZE : DIGESTSIZE, ell);
+  unsigned int ell = (treeNum == 0)? ell1 : ell2;
+  desired[treeNum].init(sk, treeSizes[treeNum], DIGESTSIZE, ell);
 }
 
 /*

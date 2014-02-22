@@ -24,6 +24,7 @@ static CryptoPP::Integer numHashes = 0;
 
 Data::Data() {
   // Empty constructor
+  m_size = kDigestSize;
 }
 
 /*
