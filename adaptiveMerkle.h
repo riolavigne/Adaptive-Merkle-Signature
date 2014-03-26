@@ -19,8 +19,6 @@ class AdaptiveMerkle {
     AdaptiveMerkle::Signature sign(Data digest);
     // returns the number of messages that can still be signed by the object
     CryptoPP::Integer getMessagesLeft();
-    // Returns the total size of the structure in bytes
-    CryptoPP::Integer getSize();
 
     // --- static methods --- //
     static bool verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, unsigned int ell1, unsigned int ell2);

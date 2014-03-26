@@ -91,20 +91,6 @@ CryptoPP::Integer AdaptiveMerkle::getMessagesLeft() {
   return msgsLeft;
 }
 
-/*
- * Calculates and returns the size of the entire signature structure in bytes
- */
-CryptoPP::Integer AdaptiveMerkle::getSize() {
-  CryptoPP::Integer size = secretKey.size();
-  size += sizeof(unsigned int) * 3;
-  size += sizeof(msgsLeft);
-  for (size_t i = 0; i < treeSizes.size(); i++) {
-    size += sizeof(unsigned int);
-    size += exist[i].getSize()*2;
-  }
-  return size;
-}
-
 /* ------ Static Functions ------ */
 
 /*
