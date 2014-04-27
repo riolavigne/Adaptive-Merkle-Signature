@@ -4,7 +4,6 @@
 #include "cryptopp/osrng.h" // PRNG
 
 #include "adaptiveMerkle.h"
-//#include "merkleAsynch.h"
 using namespace std;
 
 #define DIGESTSIZE 32 // 256 bits
@@ -64,39 +63,47 @@ Data getRandMsg(unsigned int msgSize) {
 }
 
 void adaptiveTest() {
-  cout << "------- Adaptive Merkle Test --------" << endl;
+  //cout << "------- Adaptive Merkle Test --------" << endl;
   string sct = "secret";
   Data sk = Data::hashMessage(sct, sct.size());
-  unsigned int ell1 = 50;
-  unsigned int ell2 = 50;
+  //unsigned int ell1 = 100;
+  //unsigned int ell2 = 1000;
   CryptoPP::Integer numSigs = 1;
-  unsigned int treeSize = 8;
-  unsigned int numTrees = 3;
+  unsigned int treeSize = 12;
+  unsigned int numTrees = 2;
+  vector<unsigned int> ell(numTrees);
   vector<unsigned int> depths(numTrees);
-  depths[0] = 15; numSigs *= (1 << depths[0]);
-  depths[1] = 13; numSigs *= (1 << depths[1]);
-  depths[2] = 12; numSigs *= (1 << depths[2]);
+  depths[0] = 20; numSigs *= (1 << depths[0]);
+  ell[0] = 4;
+  depths[1] = 12; numSigs *= (1 << depths[1]);
+  ell[1] = 64;
   //for (unsigned int i = 0; i < numTrees; i++) {
   //  depths[i] = treeSize;
   //  numSigs *= (1 << depths[i]);
   //}
-  cout << "numSigs = " << numSigs << endl;
-  if (numSigs > 1<<10) numSigs = 1<<10;
+  //cout << "numSigs = " << numSigs << endl;
+  CryptoPP::Integer numTimes = (numSigs > 1<<10) ? 1 << 10 : numSigs - 1;
 
-  cout << "Num trees = " << numTrees << endl;
-  cout << "Depths = ";
+  //cout << "Num trees = " << numTrees << endl;
+  //cout << "Depths = ";
   for (unsigned int i = 0; i < numTrees; i++) {
-    cout << depths[i] <<", ";
+    //cout << depths[i] <<", ";
   }
-  cout << endl;
+  //cout << endl;
+  //cout << "ells = ";
+  for (unsigned int i = 0; i < numTrees; i++) {
+    //cout << ell[i] << ",";
+  }
+  //cout << endl;
 
   // setup
   startHashcount(); startTimer();
-  AdaptiveMerkle am(depths, sk, ell1, ell2);
+  AdaptiveMerkle am(depths, sk, ell);
+  // AdaptiveMerkle am(depths, sk, ell);
   Data publicKey = am.getPublicKey();
   double setup = endTimer();
   CryptoPP::Integer setupHC = endHashcount();
-  cout << "setup completed." << endl;
+  //cout << "setup completed." << endl;
 
   // sign & verify
   double sign = 0;
@@ -105,13 +112,12 @@ void adaptiveTest() {
   CryptoPP::Integer veriHC = 0;
   bool success = true;
 
-  //numSigs = 1 << 10;
   // reassigning so it doesn't run forever
-  for (unsigned int i = 0; i < numSigs + 1; i++) {
+  for (unsigned int i = 0; i < numTimes; i++) {
     if (i % 100 == 0) {
-      cout << "." << flush;
+      //cout << "." << flush;
       if (!success) {
-        cout << "Failed" << endl;
+        //cout << "Failed" << endl;
         return;
       }
     }
@@ -122,19 +128,23 @@ void adaptiveTest() {
       sign += endTimer(); signHC += endHashcount();
       startHashcount(); startTimer();
       success = success &&
-        AdaptiveMerkle::verify(digest, sig, publicKey, ell1, ell2);
+        AdaptiveMerkle::verify(digest, sig, publicKey, ell);
       veri += endTimer(); veriHC += endHashcount();
     } catch (messagesException e) {
-      cout << "Exception occurred: " << e.what() << endl;
+      //cout << "Exception occurred: " << e.what() << endl;
       break;
     }
   }
-  cout << endl;
+  //cout << endl;
   //cout << "AM: " << am.toString() << endl;
 
   // Calculating size
   Data digest = getRandMsg(DIGESTSIZE);
   AdaptiveMerkle::Signature sig = am.sign(digest);
+  //cout << "sig.wint[0].size = " << sig[0].wint.size() << endl;
+  //cout << "\t[0][0] = " << sig[0].wint[0].size() << endl;
+  //cout << "sig.auth[0].size = " << sig[0].auth.size() << endl;
+  //cout << "\t[0][0] = " << sig[0].auth[0].size() << endl;
   unsigned int sigsize = 0;
   for (unsigned int i = 0; i < sig.size(); i++) {
     vector<Data> wint = sig[i].wint;
@@ -145,26 +155,30 @@ void adaptiveTest() {
     for (size_t k = 0; k < auth.size(); k++) {
       sigsize += auth[k].size();
     }
-    sigsize += sizeof(unsigned int);
+    sigsize += 64;//sizeof(unsigned int);
   }
 
-  sign /= numSigs.ConvertToLong(); signHC /= numSigs;
-  veri /= numSigs.ConvertToLong(); veriHC /= numSigs;
-  cout << "Sig size\t" << sigsize<<" bytes\t" << (double) sigsize/1024.0 <<" kb" <<endl;
-  cout << "---------------------------" << endl;
-  cout << "capacity\tSize\tSetup\tSigning\tVerifying\tSpace" <<endl;
-  cout << "2^40    \t"<<sigsize<<"\t"<<setup/1000<<"\t"<<sign<<"\t"<<veri<<"\t\t"<<am.getSize()<<endl;
+  sign /= numTimes.ConvertToLong(); signHC /= numSigs;
+  veri /= numTimes.ConvertToLong(); veriHC /= numSigs;
 
+  double baseSigs = log((double) numSigs.ConvertToLong())/log(2.0);
+  //cout << "Sig size\t" << sigsize<<" bytes\t" << (double) sigsize/1024.0 <<" kb" <<endl;
+  cout << "---------------------------" << endl;
+  cout << "capacity\tSize\tSetup\tSigning\tVerifying\tSpace\tells" <<endl;
+  cout << "2^"<<baseSigs<<"\t"<<sigsize<<"\t"<<setup/1000<<"\t"<<sign<<"\t"<<veri<<"\t"<<am.getSize()<<"\t";
+  for (unsigned int i = 0; i < numTrees; i++){
+    cout << ell[i] <<", ";
+  }
+  cout << endl;
   //printResults(success, setup, sign, veri,
   //    setupHC, signHC, veriHC);
 }
 
 void merkleTest() {
   cout << "------- Merkle Test --------" << endl;
-  unsigned int ell = 50;
-  unsigned int height = 8;
-  bool bottom = false;
-  unsigned int nodeSize = bottom ? DIGESTSIZE : BLOCKSIZE;
+  unsigned int ell = 100;
+  unsigned int height = 5;
+  unsigned int nodeSize = DIGESTSIZE;
   cout << "ell = " << ell << endl;
   cout << "height = " << height << endl;
   cout << "nodeSize = " << nodeSize << endl;
@@ -180,6 +194,7 @@ void merkleTest() {
   cout << "pk = " << pk.toString() << endl;
   CryptoPP::Integer setupHC = endHashcount();
   int totalSigs = 1 << height;
+  unsigned int sigSize = 0;
 
   // sign & verify
   double sign = 0;
@@ -204,6 +219,7 @@ void merkleTest() {
       }
       veri += endTimer();
       veriHC += endHashcount();
+      sigSize = (merk.wint.size())* BLOCKSIZE + (merk.auth.size() + 2)*DIGESTSIZE;
     } catch (exception& e) {
       cout << endl;
       cout << "Exception occurred: " << e.what() << endl;
@@ -216,11 +232,12 @@ void merkleTest() {
 
   printResults(success, setup, sign, veri,
       setupHC, signHC, veriHC);
+  cout << "Sig size\t" << sigSize << endl;
 }
 
 void winternitzTest() {
-  unsigned int ell = 50;
-  unsigned int datasize = BLOCKSIZE;
+  unsigned int ell = 100;
+  unsigned int datasize = DIGESTSIZE;
   cout << "------- Winternitz Test --------" << endl;
   cout << "ell = " << ell << endl;
   cout << "Data size = " << datasize << endl;
@@ -252,6 +269,7 @@ void winternitzTest() {
 
   printResults(success, setup, sign, veri,
       setupHC, signHC, veriHC);
+  cout << "sig size\t" << signature.size()*signature[0].size() << endl;
 }
 
 void hashTest() {
@@ -264,27 +282,16 @@ void hashTest() {
   Data digest = getRandMsg(DIGESTSIZE);
   double totalTime = clock();
   for (int i = 0; i < lmt; i++) {
-    //startTimer();
-    //randTime += endTimer();
-    //startTimer();
     Data::hashMany(digest, 1, digest.size());
-    //double t = endTimer();
-    //time += t;
-    //if (t < minTime) minTime = t;
-    //if (t > maxTime) maxTime = t;
   }
   totalTime = 1000 * (clock() - totalTime) / CLOCKS_PER_SEC;
-  cout << "Total hashing time: " << totalTime << endl;
+  //cout << "Total hashing time: " << totalTime << endl;
 
   startTimer();
   Data::hashMany(digest, lmt, digest.size() );
   totalTime = endTimer();
-  cout << "Hashing " << lmt << " times: " <<totalTime << endl;
-  //cout << "Hashing digest speed: " << time/lmt <<" ms"<<endl;
-  //cout<< "\t max time = " << maxTime << " ms" <<endl;
-  //cout<< "\t min time = " << minTime << " ms" <<endl;
-  //cout << "\t rand time = " << randTime / lmt << " ms" <<endl;
-  //cout << "\t Total time = " << totalTime << " ms" <<endl;
+  //cout << "Hashing " << lmt << " times: " <<totalTime << endl;
+  //cout << "\t\t\t" << (totalTime/lmt) << " ms" << endl;
 
   time = 0;
   for (int i = 0; i < lmt; i++) {
@@ -293,20 +300,17 @@ void hashTest() {
     Data::generateSecretKey(digest, 0, DIGESTSIZE);
     time += endTimer();
   }
-  cout << "Generate sk ("<<DIGESTSIZE<<" bytes):" << time/lmt <<"ms"<<endl;
+  //cout << "Generate sk ("<<DIGESTSIZE<<" bytes): " << time/lmt <<" ms"<<endl;
+}
 
-  time = 0;
-  for (int i = 0; i < lmt; i++) {
-    Data digest = getRandMsg(DIGESTSIZE);
-
-    startTimer();
-    Data sk = Data::generateSecretKey(digest, 0, BLOCKSIZE);
-    time += endTimer();
-  }
-  cout << "Generate sk ("<<BLOCKSIZE<<" bytes):" << time/lmt <<"ms"<<endl;
+void memtest() {
+  Data foo(CryptoPP::Integer());
+  Data digest = getRandMsg(DIGESTSIZE);
+  Data::generateSecretKey(digest, 0, DIGESTSIZE);
 }
 
 int main(int, char**) {
+  //memtest();
   //hashTest();
   //winternitzTest();
   //merkleTest();

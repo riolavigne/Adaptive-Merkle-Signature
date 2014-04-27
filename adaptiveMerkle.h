@@ -8,7 +8,7 @@ class AdaptiveMerkle {
 
     // Constructor is also setup/keygen
     AdaptiveMerkle(std::vector<unsigned int> treeSizesIn, Data sk,
-        unsigned int ell1In = 16, unsigned int ell2In = 8);
+        std::vector<unsigned int> ellIn);
     ~AdaptiveMerkle();
     // returns root of pk
     Data getPublicKey();
@@ -23,9 +23,9 @@ class AdaptiveMerkle {
     CryptoPP::Integer getSize();
 
     // --- static methods --- //
-    static bool verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, unsigned int ell1, unsigned int ell2);
+    static bool verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, std::vector<unsigned int> ell);
     // calculates what the pk should be given the digest
-    static Data calculatePublicKey(Data digest, AdaptiveMerkle::Signature sig, unsigned int ell1, unsigned int ell2);
+    static Data calculatePublicKey(Data digest, AdaptiveMerkle::Signature sig, std::vector<unsigned int> ell);
 
   private:
     Data secretKey;
@@ -34,8 +34,7 @@ class AdaptiveMerkle {
     std::vector<Merkle> desired;
     unsigned int state; // State for creating trees (not msg number)
     AdaptiveMerkle::Signature sig; // the signature is updated after each message
-    unsigned int ell1; // for the bottom trees (with Winternitz 256)
-    unsigned int ell2; // for the trees that are not bottom (Winternitz 128)
+    std::vector<unsigned int> ell; // ell parameters for winternitz
     // Integers to keep track of how many messages the trees can sign in total and how many messages are left
     CryptoPP::Integer msgsLeft;
 

@@ -19,15 +19,13 @@ using namespace std;
  * initializes the first signature, and initializes the desired vector of trees.
  */
 AdaptiveMerkle::AdaptiveMerkle(vector<unsigned int> treeSizesIn, Data sk,
-    unsigned int ell1In, unsigned int ell2In) {
-  ell1 = ell1In;
-  ell2 = ell2In;
+    vector <unsigned int> ellIn) {
+  ell = ellIn;
   secretKey = sk;
   treeSizes = treeSizesIn;
-  exist.push_back(initTree(treeSizes[0], ell1)); // Bottom tree
-  msgsLeft = 1 << treeSizes[0];
-  for (size_t i = 1; i < treeSizes.size(); i++) {
-    exist.push_back(initTree(treeSizes[i], ell2)); // Not bottom
+  msgsLeft = 1;
+  for (size_t i = 0; i < treeSizes.size(); i++) {
+    exist.push_back(initTree(treeSizes[i], ell[i])); // Not bottom
     msgsLeft *= 1 << treeSizes[i];
   }
   desired = vector<Merkle>(treeSizes.size());
@@ -112,8 +110,8 @@ CryptoPP::Integer AdaptiveMerkle::getSize() {
  * the message digest, the AdaptiveMerkle signature, public key,
  * and the ell1 and ell2 winternitz parameters.
  */
-bool AdaptiveMerkle::verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, unsigned int ell1, unsigned int ell2) {
-  Data pk = calculatePublicKey(digest, sig, ell1, ell2);
+bool AdaptiveMerkle::verify(Data digest, AdaptiveMerkle::Signature sig, Data publicKey, vector<unsigned int> ell) {
+  Data pk = calculatePublicKey(digest, sig, ell);
   return (0 == memcmp(pk.bytes, publicKey.bytes, DIGESTSIZE));
 }
 
@@ -121,15 +119,11 @@ bool AdaptiveMerkle::verify(Data digest, AdaptiveMerkle::Signature sig, Data pub
  * Calculates what the public key should be given a digest, signature
  * and winternitz parameters.
  */
-Data AdaptiveMerkle::calculatePublicKey(Data digest, AdaptiveMerkle::Signature sig, unsigned int ell1, unsigned int ell2) {
+Data AdaptiveMerkle::calculatePublicKey(Data digest, AdaptiveMerkle::Signature sig, vector<unsigned int> ell) {
   Data pk = digest;
   // calculate public keys up and up
   for (size_t i = 0; i < sig.size(); i++) {
-    unsigned int ell = ell2;
-    if (i == 0) {
-      ell = ell1;
-    }
-    digest = Merkle::calculatePublicKey(digest, sig[i], ell);
+    digest = Merkle::calculatePublicKey(digest, sig[i], ell[i]);
   }
   return digest;
 }
@@ -203,8 +197,7 @@ void AdaptiveMerkle::update(Data digest) {
 void AdaptiveMerkle::initialize(unsigned int treeNum) {
   Data sk = Data::generateSecretKey(secretKey, state);
   state++;
-  unsigned int ell = (treeNum == 0)? ell1 : ell2;
-  desired[treeNum].init(sk, treeSizes[treeNum], DIGESTSIZE, ell);
+  desired[treeNum].init(sk, treeSizes[treeNum], DIGESTSIZE, ell[treeNum]);
 }
 
 /*

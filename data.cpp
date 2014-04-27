@@ -1,10 +1,11 @@
 #include "cryptopp/base64.h"
+
 #include "cryptopp/modes.h"
 #include "cryptopp/filters.h"
-#include "cryptopp/aes.h"
+//#include "cryptopp/aes.h"
 #include "cryptopp/osrng.h" // PRNG
 
-#include "cryptopp/rijndael.h" // plain AES??
+#include <openssl/evp.h>
 
 #include "data.h"
 
@@ -134,19 +135,43 @@ Data Data::combineHashes(vector<Data> in, unsigned int datasize) {
  */
 Data Data::generateSecretKey(Data seed, CryptoPP::Integer state, unsigned int
     keySize) {
-  CTR_Mode<AES>::Encryption e; // TODO: I am looking for access to raw AES.
-  Data iv(CryptoPP::Integer(), kBlockSize); // AES Blocksize = kBlockSize (16)
-  e.SetKeyWithIV(seed.bytes, keySize, iv.bytes); // iv is the counter
-  Data count(state, kBlockSize);
+  Data iv(CryptoPP::Integer(), keySize);
+  //Data iv(CryptoPP::Integer(), kBlockSize); // AES Blocksize = kBlockSize (16)
+  Data count(state, keySize);
+  //Data count(state, kBlockSize);
   byte data[keySize];
-  for (unsigned int i = 0; i < keySize; i+= kBlockSize) {
-    ArraySource(count.bytes, count.size(), true,
-        new StreamTransformationFilter(e,
-          new ArraySink(data + i, keySize),
-          StreamTransformationFilter::NO_PADDING
-          )
-        );
+
+  //HMAC< SHA256 > hmac(seed.bytes, keySize);
+  //ArraySource(count.bytes, count.size(), true,
+  //    new HashFilter(hmac,
+  //      new ArraySink(data, keySize)
+  //      )
+  //    );
+
+  int bytesLeft = (int) keySize;
+  const EVP_CIPHER *aesCipher = EVP_aes_128_ctr();
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  EVP_EncryptInit (ctx, aesCipher, seed.bytes, iv.bytes);
+  for (unsigned int i = 0; i < keySize; i += kBlockSize) {
+    EVP_EncryptUpdate (ctx, data, &bytesLeft, count.bytes, count.size());
   }
+
+  EVP_EncryptFinal(ctx, data, &bytesLeft);
+
+  //CTR_Mode<AES>::Encryption e;
+  //e.SetKeyWithIV(seed.bytes, keySize, iv.bytes); // iv is the counter
+  //for (unsigned int i = 0; i < keySize; i+= kBlockSize) {
+  //  ArraySource(count.bytes, count.size(), true,
+  //      new StreamTransformationFilter(e,
+  //        new ArraySink(data + i, keySize),
+  //        StreamTransformationFilter::NO_PADDING
+  //        )
+  //      );
+  //}
+
+  EVP_CIPHER_CTX_free(ctx);
+
+
   Data cipher(data, keySize);
   numHashes++;
   return cipher;
