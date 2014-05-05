@@ -31,6 +31,14 @@ def wintSigSize(l):
   n = t + tp
   return n * block
 
+def wintStoredSize(l):
+  t = ceil(m / (log (l, 2)))
+  tp = ceil(log(t * l, l))
+  n = t + tp
+  s = 64 * 3 # l, t, t_p
+  s += 16 * (n)
+
+
 ''' MERKLE '''
 # Approx Merkle setup time in ms
 def merkSetup(l, h):
@@ -44,6 +52,12 @@ def merkSign(l, h):
 # Merkle Signature Size
 def merkSigSize(l, h):
   return wintSigSize(l) + h * word + 2*word
+
+def merkStoredSize(l, h):
+  s = 64*2 # sk and depth
+  s += (2**(h + 1) - 1)*32 # nodes
+  s += (2**h) * wintStoredSize(l) # winternitz
+  s += 64 # msg num
 
 ''' ADAPTIVE '''
 def adapSetup(l, h):
@@ -87,9 +101,10 @@ def statelessSigSize(l, h):
 MAX = 11
 signLmt = 6 # ms -- this is RSA time
 sigSizeLmt = 4 * 1024 # KB
-setupLmt = 30*60*1000 # 30 minutes
+setupLmt = 60*60*1000 # 60 minutes
 levelsLmt = 7
 minLevelsLmt = 5
+numLevels = 10
 
 # Minimize signing time
 def optimize(cap):
@@ -97,10 +112,10 @@ def optimize(cap):
   min_h = []
   min_ell = []
 
-  H = filter(lambda h: len(h) < levelsLmt and len(h) > minLevelsLmt, partitions(cap))
+  H = filter(lambda h: len(h) <= numLevels, partitions(cap))
+  print "Filtered"
   for h in H:
     h.sort(reverse=True)
-    print h
     L = len(h)
     ell = [2]*L
     while True:
@@ -142,6 +157,11 @@ def partitions(n):
 		yield [1] + p
 		if p and (len(p) < 2 or p[1] > p[0]):
 			yield [p[0] + 1] + p[1:]
+
+print "Signature size limit: ", sigSizeLmt/1024, " KB"
+print "Setup time limit: ", setupLmt/60/1000, " min"
+print "Levels: ", numLevels
+print "Maximum ell parameter: ", MAX
 
 optimize(64)
 

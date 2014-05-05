@@ -14,9 +14,9 @@ using namespace std;
  * and whether or not the leaves at the bottom take digests of size
  * 32 bytes or 16 bytes.
  */
-Merkle::Merkle(Data sk, unsigned int depthIn, unsigned int digestsizeIn,
+Merkle::Merkle(Data sk, unsigned int depthIn,
     unsigned int ellIn) {
-  init(sk, depthIn, digestsizeIn, ellIn);
+  init(sk, depthIn, ellIn);
 }
 
 /*
@@ -33,12 +33,11 @@ Merkle::Merkle() {
  * easy to make vectors of Merkle trees, so later init can be called
  * to initialize all of the object's values.
  */
-void Merkle::init(Data sk, unsigned int depthIn, unsigned int digestsizeIn,
+void Merkle::init(Data sk, unsigned int depthIn,
     unsigned int ellIn) {
   ell = ellIn;
   secretKey = sk;
   depth = depthIn;
-  digestsize = digestsizeIn;
   buildingState = CryptoPP::Integer::Power2(depth+1) - 1;
   msg = 0;
   initialized = true;
@@ -52,7 +51,6 @@ void Merkle::init(Data sk, unsigned int depthIn, unsigned int digestsizeIn,
 string Merkle::toString() {
   stringstream ss;
   ss << "Merkle signature tree: depth = " << depth << endl;
-  ss << "\tdigest size = " << digestsize << endl;
   ss << "\tell = " << ell << endl;
   ss << "\tmessages signed = " << msg << endl;
   ss << "\tpk = " << tree[depth][0].toString() << endl;
@@ -125,7 +123,7 @@ bool Merkle::needLeaf(){
  * Otherwise, it's just pushed onto the stack for continued calculation
  */
 void Merkle::makeLeaf() {
-  Data sk = Data::generateSecretKey(secretKey, msg, digestsize);
+  Data sk = Data::generateSecretKey(secretKey, msg, DIGESTSIZE);
   msg++;
   Winternitz sig(sk, ell);
   Node leaf;

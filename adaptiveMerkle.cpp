@@ -136,7 +136,7 @@ Data AdaptiveMerkle::calculatePublicKey(Data digest, AdaptiveMerkle::Signature s
  */
 Merkle AdaptiveMerkle::initTree(unsigned int depth, unsigned int ell) {
   Data sk = Data::generateSecretKey(secretKey, state, DIGESTSIZE);
-  Merkle tree(sk, depth, DIGESTSIZE, ell);
+  Merkle tree(sk, depth, ell);
   tree.buildTree();
   state++;
   return tree;
@@ -197,7 +197,7 @@ void AdaptiveMerkle::update(Data digest) {
 void AdaptiveMerkle::initialize(unsigned int treeNum) {
   Data sk = Data::generateSecretKey(secretKey, state);
   state++;
-  desired[treeNum].init(sk, treeSizes[treeNum], DIGESTSIZE, ell[treeNum]);
+  desired[treeNum].init(sk, treeSizes[treeNum], ell[treeNum]);
 }
 
 /*

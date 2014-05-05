@@ -43,7 +43,7 @@ int main(int, char**) {
   int numTests = 1 << 4;
   startTimer();
   //for (int i = 0; i < numTests; i++) {
-    params.GenerateRandomWithKeySize(rng, 3072);
+    params.GenerateRandomWithKeySize(rng, 2048);
   //}
   // Generate public and private keys
 

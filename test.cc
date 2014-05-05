@@ -73,9 +73,9 @@ void adaptiveTest() {
   unsigned int numTrees = 2;
   vector<unsigned int> ell(numTrees);
   vector<unsigned int> depths(numTrees);
-  depths[0] = 20; numSigs *= (1 << depths[0]);
+  depths[0] = 5; numSigs *= (1 << depths[0]);
   ell[0] = 4;
-  depths[1] = 12; numSigs *= (1 << depths[1]);
+  depths[1] = 5; numSigs *= (1 << depths[1]);
   ell[1] = 64;
   //for (unsigned int i = 0; i < numTrees; i++) {
   //  depths[i] = treeSize;
@@ -187,7 +187,7 @@ void merkleTest() {
 
   // setup
   startTimer(); startHashcount();
-  Merkle tree(sk, height, nodeSize, ell);
+  Merkle tree(sk, height, ell);
   tree.buildTree();
   Data pk = tree.getPublicKey();
   double setup = endTimer();

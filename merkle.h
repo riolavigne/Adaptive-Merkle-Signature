@@ -10,13 +10,13 @@ class Merkle {
     };
 
     // need secret key, depth, size of digest we want to sign, and winternitz sec param
-    Merkle(Data sk, unsigned int depth, unsigned int digestsize, unsigned int ell);
+    Merkle(Data sk, unsigned int depth, unsigned int ell);
 
     // Empty constructor so that it is easy to create vectors of trees
     Merkle();
 
     // Initializes the Merkle tree if empty constructor was used.
-    void init(Data sk, unsigned int sizeIn, unsigned int digestsize, unsigned int ell);
+    void init(Data sk, unsigned int sizeIn, unsigned int ell);
 
     // Nothing to destroy.
     ~Merkle() {}
@@ -84,8 +84,6 @@ class Merkle {
     // Message number. Hopefully it won't go above 2^64 messages, but just in
     // case we will use the Integer class
     CryptoPP::Integer msg;
-    // Size of the digest we want to sign: 16 or 32 bytes
-    unsigned int digestsize;
     // Whether or not it is initialized.
     bool initialized;
 
